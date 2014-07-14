@@ -1,0 +1,653 @@
+#include <string>
+#include <cctype>
+#include <functional>
+#include <stack>
+#include <map>
+#include <list>
+#include <memory>
+#include <iostream>
+#include <assert.h>
+
+#include <boost/variant.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
+class GrakoException : std::exception
+{
+};
+
+class ParseError : public GrakoException
+{
+};
+
+class FailedParseBase : public ParseError
+{
+public:
+  FailedParseBase() {}
+  virtual std::ostream& output(std::ostream& cout) const = 0;
+  virtual void _throw() = 0;
+};
+
+std::ostream& operator<< (std::ostream& cout, const FailedParseBase& exc)
+{
+  return exc.output(cout);
+}
+
+class FailedParse : public FailedParseBase
+{
+public:
+  FailedParse(const std::string& msg) : FailedParseBase(), _msg(msg) {}
+  const std::string _msg;
+  std::ostream& output(std::ostream& cout) const
+  {
+    return cout << _msg;
+  }
+  void _throw() { throw *this; }
+};
+  
+class FailedToken : public FailedParseBase
+{
+public:
+  FailedToken(const std::string& token) : FailedParseBase(), _token(token) {}
+  const std::string _token;
+  std::ostream& output(std::ostream& cout) const
+  {
+    return cout << "expecting \"" << _token << "\"";
+  }
+  void _throw() { throw *this; }
+};
+
+
+/* FIXME: Maybe use unicode instead char.  The following is not
+   unicode safe (for example, skip_to used with a non-7bit value).  */
+
+typedef char CHAR_T;
+#define CHAR_NULL ((CHAR_T) 0) /* Sort of.  */
+
+class Buffer
+{
+public:
+  Buffer(const std::string &text)
+    : _text(text), _pos(0)
+  {
+  }
+
+  const std::string _text;
+  size_t _pos;
+  
+  size_t len() const
+  {
+    return _text.length();
+  }
+
+  bool atend() const
+  {
+    return _pos >= len();
+  }
+
+  bool ateol() const
+  {
+    return atend()
+      || _text[_pos] == '\r'
+      || _text[_pos] == '\n';
+  }
+  
+  CHAR_T current() const
+  {
+    if (atend())
+      return CHAR_NULL;
+    else
+      return _text[_pos];
+  }
+
+  CHAR_T at(size_t pos) const
+  {
+    if (pos >= len())
+      return CHAR_NULL;
+    return _text[pos];
+  }
+
+  CHAR_T peek(size_t off) const
+  {
+    return at(_pos + off);
+  }
+
+  CHAR_T next()
+  {
+    if (atend())
+      return CHAR_NULL;
+    return _text[_pos++];
+  }
+
+  void go_to(size_t pos)
+  {
+    size_t length = len();
+
+    if (pos < 0)
+      _pos = 0;
+    else if (pos > length)
+      _pos = length;
+    else
+      _pos = pos;
+  }
+
+  void move(size_t off)
+  {
+    go_to(_pos + off);
+  }
+
+  void next_token()
+  {
+    size_t pos;
+    do
+      {
+	pos = _pos;
+	/* FIXME: eatwhitespace, eatcomments.  */
+      }
+    while (pos != _pos);
+  }
+
+  size_t skip_to(CHAR_T ch)
+  {
+    size_t pos = _pos;
+    size_t length = len();
+    while (pos < length && _text[pos] != ch)
+      ++pos;
+    go_to(pos);
+    return pos;
+  }
+
+  size_t skip_past(CHAR_T ch)
+  {
+    skip_to(ch);
+    next();
+    return _pos;
+  }
+
+  size_t skip_to_eol()
+  {
+    return skip_to('\n');
+  }
+  
+  bool is_space()
+  {
+    return false;
+    /* return self.current() in self.whitespace */
+  }
+
+  bool is_name_char()
+  {
+    CHAR_T ch = this->current();
+    return ch != CHAR_NULL && std::isalpha(ch);
+  }
+
+  bool match(std::string token)
+  {
+    int len = token.length();
+    bool eq = (_text.compare(_pos, len, token) == 0);
+    if (eq)
+      {
+	move(len);
+	return true;
+      }
+    return false;
+  }
+  
+};
+  
+typedef int state_t;
+
+/* Simple container for parser exceptions, to avoid ambiguities in the
+   boost::variant.  */
+class AstException
+{
+public:
+  AstException(std::shared_ptr<FailedParseBase> exc)
+    : _exc(exc)
+  {}
+  std::shared_ptr<FailedParseBase> _exc;
+  const FailedParseBase& operator*() const
+  {
+    return *_exc;
+  }
+};
+
+class Ast;
+using AstPtr = std::shared_ptr<Ast>;
+AstPtr& operator<<(AstPtr& augend, const AstPtr& addend);
+
+using AstNone = std::nullptr_t;
+using AstString = std::string;
+
+class AstList : public std::list<AstPtr>
+{
+public:
+  AstList() : _mergeable(false) {}
+  AstList(std::list<AstPtr> list) : std::list<AstPtr>(list), _mergeable(false) {}
+  /* A mergeable list can extend a preceding list on the concrete
+     stack.  Example: Grammar "a" ("b" "c") would create a mergeable
+     list containing the group tokens.  Mergeability is a property of
+     the right-hand side only.  Closures are not mergeable.  */
+  bool _mergeable;
+};
+
+
+class AstMap : public std::map<std::string, AstPtr>
+{
+#define AST_DEFAULT 0
+#define AST_FORCELIST 1
+
+public:
+  std::vector<std::string> _order;
+
+  AstMap(std::vector<std::pair<std::string, int>> keys)
+  {
+    for (auto pair: keys)
+      {
+	const std::string& key = pair.first;
+	bool force_list = !!(pair.second & AST_FORCELIST);
+
+	_order.push_back(key);
+	if (force_list)
+	  (*this)[key] = std::make_shared<Ast>(AstList());
+	else
+	  (*this)[key] = std::make_shared<Ast>();
+      }
+  }
+
+};
+
+
+/* Poor man's XML library.  */
+class Ast
+{
+public:
+  Ast() : _content(AstNone()) {}
+  Ast(const AstString& str) : _content(str) {}
+  Ast(const AstList& list) : _content(list) {}
+  Ast(const AstMap& map) : _content(map) {}
+  Ast(const AstException& exc) : _content(exc) {}
+  boost::variant<AstNone, AstString, AstList, AstMap, AstException> _content;
+
+  /* Concrete nodes use AstNone, AstString and AstList.  Abstract nodes
+     use AstMap.  */
+  class AstAdder : public boost::static_visitor<void>
+  {
+  public:
+    AstAdder(Ast& augend, const AstPtr& addend)
+      : _augend(augend), _addend(addend)
+    {
+    }
+
+    Ast& _augend;
+    const AstPtr& _addend;
+
+    class AstAdderTo : public boost::static_visitor<void>
+    {
+    public:
+      AstAdderTo(Ast& augend, const AstPtr& addend, bool mergeable=false)
+	: _augend(augend), _addend(addend), _mergeable(mergeable)
+      {
+      }
+      
+      Ast& _augend;
+      const AstPtr& _addend;
+      bool _mergeable;
+
+      void operator() (AstNone& none)
+      {
+	/* None-augend is replaced.  */
+	_augend._content = _addend->_content;
+      }
+
+      void operator() (AstString& str)
+      {
+	AstPtr augend = std::make_shared<Ast>(str);
+
+	if (_mergeable)
+	  {
+	    _augend._content = AstList({ augend });
+	    AstList& list = boost::get<AstList>(_augend._content);
+	    AstList& rlist = boost::get<AstList>(_addend->_content);
+	    list.insert(list.end(), rlist.begin(), rlist.end());
+	  }
+	else
+	  _augend._content = AstList({ augend, _addend });
+      }
+
+      void operator() (AstList& list)
+      {
+	if (_mergeable)
+	  {
+	    AstList& rlist = boost::get<AstList>(_addend->_content);
+	    list.insert(list.end(), rlist.begin(), rlist.end());
+	  }
+	else
+	  {
+	    list.push_back(_addend);
+	  }
+      }
+
+      void operator() (AstMap& map)
+      {
+	/* Adding to a map is ignored - this is used to set exceptions
+	   in the named-parameter case, and otherwise ignored.  */
+
+	/* FIXME: No.  Adding a map to a map can be entirely intentional,
+	   for example within an option:
+	   foo = "a" (key: "b" "c") "d";
+	   Maybe add mergeable flag to maps?  */
+      }
+
+      void operator() (AstException& exc)
+      {
+	/* Can this happen?  */
+	assert(!"AstAdder can't add to an exception.");
+      }
+    };
+
+    void operator() (AstNone& none)
+    {
+      /* None addend is ignored.  */
+    }
+
+    void operator() (AstString& str)
+    {
+      AstAdderTo adder_to(_augend, _addend);
+      boost::apply_visitor(adder_to, _augend._content);
+    }
+
+    void operator() (AstList& list)
+    {
+      AstAdderTo adder_to(_augend, _addend, list._mergeable);
+      boost::apply_visitor(adder_to, _augend._content);
+    }
+
+    void operator() (AstMap& map)
+    {
+      AstAdderTo adder_to(_augend, _addend);
+      boost::apply_visitor(adder_to, _augend._content);
+    }
+
+    void operator() (AstException& exc)
+    {
+      /* Exceptions overwrite everything.  */
+      _augend._content = exc;
+    }
+  };
+  
+  void add (const AstPtr& addend)
+  {
+    AstAdder adder(*this, addend);
+    boost::apply_visitor(adder, addend->_content);
+  }
+
+  class mapped_type
+  {
+  public:
+    mapped_type(Ast& ast, const char *key) : _ast(ast), _key(key) {}
+    Ast& _ast;
+    std::string _key;
+    const AstPtr& operator=(const AstPtr& value)
+    {
+      AstException *exc = boost::get<AstException>(&value->_content);
+      if (exc)
+	_ast._content = *exc;
+      else
+	{
+	  AstMap& map = boost::get<AstMap>(_ast._content);
+	  /* Extend the existing value.  */
+	  map.at(_key) << value;
+	}
+      return value;
+    }
+  };
+
+  mapped_type operator[](const char *key)
+  {
+    return mapped_type(*this, key);
+  }
+
+};
+
+AstPtr& operator<<(AstPtr& augend, const AstPtr& addend)
+{
+  augend->add(addend);
+  return augend;
+}
+
+
+
+std::ostream& operator<< (std::ostream& cout, const Ast& ast)
+{
+  class AstDumper : public boost::static_visitor<void>
+  {
+    void xml_escape(std::string* data) const
+    {
+      using boost::algorithm::replace_all;
+      replace_all(*data, "&",  "&amp;");
+      replace_all(*data, "\"", "&quot;");
+      replace_all(*data, "\'", "&apos;");
+      replace_all(*data, "<",  "&lt;");
+      replace_all(*data, ">",  "&gt;");
+    }
+
+    void json_escape(std::string* data) const
+    {
+      using boost::algorithm::replace_all;
+      replace_all(*data, "\\", "\\\\");
+      replace_all(*data, "\"",  "\\\"");
+      replace_all(*data, "\b",  "\\\b");
+      replace_all(*data, "\f",  "\\\f");
+      replace_all(*data, "\n",  "\\\n");
+      replace_all(*data, "\t",  "\\\t");
+      /* FIXME: Replace all < 32 */
+    }
+
+  public:
+    AstDumper(std::ostream& cout) : _cout(cout) {}
+    std::ostream& _cout;
+
+    void operator() (const AstNone& none) const
+    {
+      _cout << "null";
+    }
+
+    void operator() (const AstString& leaf) const
+    {
+      std::string _leaf = leaf;
+      json_escape(&_leaf);
+      _cout << "\"" << _leaf << "\"";
+    }
+
+    void operator() (const AstList& list) const
+    {
+      bool first = true;
+      _cout << "[\n";
+      for (auto child: list)
+	{
+	  if (first)
+	    first = false;
+	  else
+	    _cout << ", \n";
+	  _cout << "  " << *child;
+	}
+      _cout << "]\n";
+    }
+
+    void operator() (const AstMap& map) const
+    {
+      bool first = true;
+      _cout << "{\n";
+      for (auto key: map._order)
+	{
+	  if (first)
+	    first = false;
+	  else
+	      _cout << ", \n";
+	  _cout << "  \"" << key << "\" : " << *map.at(key);
+	}
+      _cout << "}\n";
+    }
+
+    void operator() (const AstException& exc) const
+    {
+      _cout << *exc;
+    }
+
+  };
+
+  AstDumper dumper(cout);
+  boost::apply_visitor(dumper, ast._content);
+  return cout;
+}
+
+
+class Parser
+{
+public:
+  Parser(Buffer& buffer)
+    : _buffer(buffer)
+  {
+  }
+
+  Buffer& _buffer;
+
+  using memo_key_t = std::tuple<size_t, std::string, state_t>;
+  using memo_value_t = std::tuple<AstPtr, size_t, state_t>;
+  std::map<memo_key_t, memo_value_t> _memoization_cache;
+  state_t _state;
+
+  template<typename T>
+  AstPtr _error(std::string msg)
+  {
+    AstException exc(std::make_shared<T>(msg));
+    AstPtr ast = std::make_shared<Ast>(exc);
+    return ast;
+  }
+
+  AstPtr _check_eof()
+  {
+    _buffer.next_token();
+    if (! _buffer.atend())
+      return _error<FailedParse>("Expecting end of text.");
+    return std::make_shared<Ast>();
+  }
+
+  AstPtr _token(std::string token)
+  {
+    _buffer.next_token();
+    if (! _buffer.match(token))
+      {
+	return _error<FailedToken>(token);
+      }
+    // _trace_match(token);
+    AstPtr node = std::make_shared<Ast>(token);
+    return node;
+  }
+
+  AstPtr _group(std::function<AstPtr ()> func)
+  {
+    AstPtr ast = func();
+    AstList *list = boost::get<AstList>(&ast->_content);
+    if (list)
+      list->_mergeable = true;
+    return ast;
+  }
+
+  void _try(std::function<void ()> func)
+  {
+    size_t pos = _buffer._pos;
+    state_t state = _state;
+    // ast_copy = self.ast._copy()
+    // self._push_ast()
+    // self.last_node = None
+    try
+      {
+	//self.ast = ast_copy
+	func();
+	//ast = self.ast
+	//cst = self.cst
+      }
+    catch (...)
+      {
+	_buffer.go_to(pos);
+	_state = state;
+	throw;
+      }
+    //finally:
+    //   self._pop_ast()
+    //self.ast = ast
+    //self._extend_cst(cst)
+    //self.last_node = cst
+  }
+
+};
+
+#define RETURN_IF_EXC(ast) if (boost::get<AstException>(&ast->_content)) return ast
+
+
+/* This stuff is generated.  */
+class MyParser : public Parser
+{
+public:
+  MyParser(Buffer& buffer)
+    : Parser(buffer)
+  {
+  }
+
+  AstPtr startrule()
+  {
+    /* This is generated for concrete rules.  */
+    AstPtr ast = std::make_shared<Ast>();
+    ast << _token("foo"); RETURN_IF_EXC(ast);
+    ast << _group([this] () {
+	AstPtr ast = std::make_shared<Ast>();
+	ast << _token("bar"); RETURN_IF_EXC(ast);
+	ast << _token("baz"); RETURN_IF_EXC(ast);
+	return ast;
+      }); RETURN_IF_EXC(ast);
+    ast << _token("bar"); RETURN_IF_EXC(ast);
+
+    return ast;
+
+    /* This is generated for abstract rules.  */
+    // AstPtr ast = std::make_shared<Ast>
+    //   (AstMap({
+    // 	  { "foo", AST_DEFAULT },
+    //       { "bar", AST_FORCELIST }
+    // 	}));
+
+    // (*ast)["foo"] = _token("foo"); RETURN_IF_EXC(ast);
+    // (*ast)["bar"] = _token("bar"); RETURN_IF_EXC(ast);
+    // ast << _token("baz"); RETURN_IF_EXC(ast);
+    // ast << _check_eof(); RETURN_IF_EXC(ast);
+    // return ast;
+
+    //    this->_try([] () {
+    // do stuff
+    //      });
+  }
+};
+
+
+int
+main(int argc, char *argv[])
+{
+  Buffer buf(argv[1]);
+  MyParser parser(buf);
+
+  try
+    {
+      AstPtr ast = parser.startrule();
+      std::cout << *ast << "\n";
+      AstException *exc = boost::get<AstException>(&ast->_content);
+      if (exc)
+	exc->_exc->_throw();
+    }
+  catch(FailedParseBase& exc)
+    {
+      std::cout << "Error: " << exc << "\n";
+    }
+
+  return 0;
+}
