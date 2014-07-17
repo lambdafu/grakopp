@@ -56,6 +56,16 @@ public:
   void _throw() { throw *this; }
 };
 
+class FailedLookahead : public FailedParseBase
+{
+public:
+  FailedLookahead(const std::string& msg) : FailedParseBase() {}
+  std::ostream& output(std::ostream& cout) const
+  {
+    return cout << "failed lookahead";
+  }
+  void _throw() { throw *this; }
+};
 
 /* FIXME: Maybe use unicode instead char.  The following is not
    unicode safe (for example, skip_to used with a non-7bit value).  */
@@ -347,7 +357,7 @@ public:
 
     void operator() (AstNone& none)
     {
-      /* None addend is ignored.  */
+      /* None addend is ignored, can happen with lookaheads, for example.  */
     }
 
     void operator() (AstString& str)
@@ -548,10 +558,42 @@ public:
   AstPtr _group(std::function<AstPtr ()> func)
   {
     AstPtr ast = func();
+    /* If a list is returned, make it mergable.  */
     AstList *list = boost::get<AstList>(&ast->_content);
     if (list)
       list->_mergeable = true;
     return ast;
+  }
+
+  AstPtr _if(std::function<AstPtr ()> func)
+  {
+    size_t pos = _buffer._pos;
+    state_t state = _state;
+    // _enter_lookahead
+
+    AstPtr ast = func();
+
+    // _leave_lookahead
+    _state = state;
+    _buffer._pos = pos;
+
+    /* Only pass through failures.  */
+    if (boost::get<AstException>(&ast->_content))
+      return ast;
+    else
+      return std::make_shared<Ast>();
+  }
+
+  AstPtr _ifnot(std::function<AstPtr ()> func)
+  {
+    AstPtr ast = _if(func);
+    /* Invert result.  */
+    if (boost::get<AstException>(&ast->_content))
+      return std::make_shared<Ast>();
+    else
+      /* If we had a invert() function on every exception, this could
+	 provide more diagnostics, maybe? */
+      return _error<FailedLookahead>("");
   }
 
   void _try(std::function<void ()> func)
@@ -599,6 +641,12 @@ public:
   {
     /* This is generated for concrete rules.  */
     AstPtr ast = std::make_shared<Ast>();
+
+    ast << _ifnot([this] () {
+	AstPtr ast = std::make_shared<Ast>();
+	ast << _token("g"); RETURN_IF_EXC(ast);
+	return ast;
+      }); RETURN_IF_EXC(ast);
     ast << _token("foo"); RETURN_IF_EXC(ast);
     ast << _group([this] () {
 	AstPtr ast = std::make_shared<Ast>();
