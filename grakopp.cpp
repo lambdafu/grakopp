@@ -561,6 +561,18 @@ public:
     return std::make_shared<Ast>();
   }
 
+  AstPtr _cut()
+  {
+    /* This AST object will be merged into the actual AST and set the
+       cut flag there.  */
+    AstPtr ast = std::make_shared<Ast>();
+    ast->_cut = true;
+
+    /* TODO: Kill memoization cache.  */
+
+    return ast;
+  }
+
   AstPtr _token(std::string token)
   {
     _buffer.next_token();
@@ -573,9 +585,8 @@ public:
     return node;
   }
 
-
   /* In case of an exception, the parser state is unmodified (useful
-     to implement choices etc.)  */
+     to implement choices etc.)  The exception is passed through anyway!  */
   AstPtr _try(std::function<AstPtr ()> func)
   {
     size_t pos = _buffer._pos;
@@ -593,30 +604,25 @@ public:
   {
     /* Sets success to true if succeeds (otherwise does not touch it).  */
     AstPtr ast = _try(func);
-    if (boost::get<AstException>(&ast->_content))
+    if (boost::get<AstException>(&ast->_content) && !ast->_cut)
       {
-	if (ast->_cut)
-	  /* Failed cut exceptions are propagated with _cut set to
-	     true.  This is equivalent to nested FailedCut exceptions
-	     in Grako.  */
-	  return ast;
-	else
-	  /* Other exceptions are ignored (normal failed option), but
-	     don't report success.  */
-	  return std::make_shared<Ast>();
+	/* Non-cut exceptions are ignored, but don't report success
+	   (normal failed option).  */
+	return std::make_shared<Ast>();
       }
-    else
-      {
-	success = true;
-	/* Forget the cut status after a successful parse.  */
-	ast->_cut = false;
-      }
+    /* Exceptions with cut are propagated with _cut set to true.  This
+       is equivalent to nested FailedCut exceptions in Grako.  Yes,
+       this counts as success (== don't consider more options).  */
+    success = true;
+    /* Forget the cut status after a successful parse.  */
+    ast->_cut = false;
     return ast;
   }
 
   AstPtr _choice(std::function<AstPtr ()> func)
   {
-    /* There is totally nothing to do here :)  */
+    /* There is totally nothing to do here :), we just need the
+       scope.  */
     AstPtr ast = _try(func);
     return ast;
   }
@@ -676,6 +682,51 @@ public:
       return _error<FailedLookahead>("");
   }
 
+  AstPtr _closure(std::function<AstPtr ()> func)
+  {
+    AstPtr cum_ast = std::make_shared<Ast>(AstList());
+
+    do
+      {
+	size_t pos = _buffer._pos;
+	AstPtr ast = _try(func);
+
+	/* Only if no exception! */
+	if (!boost::get<AstException>(&ast->_content) && (pos == _buffer._pos))
+	  return _error<FailedParse>("empty closure");
+
+	if (boost::get<AstException>(&ast->_content))
+	  {
+	    if (ast->_cut)
+	      /* Exceptions after cut are fatal.  */
+	      return ast;
+	    else
+	      /* Non-cut exceptions are ignored (just stop).  */
+	      return cum_ast;
+	  }
+
+	/* Collect result.  */
+	cum_ast << ast;
+      }
+    while (true);
+  }
+
+  AstPtr _positive_closure(std::function<AstPtr ()> func)
+  {
+    AstPtr ast = std::make_shared<Ast>(AstList());
+    ast << func();
+    if (boost::get<AstException>(&ast->_content))
+      return ast;
+
+    /* We need to merge the closure.  */
+    AstPtr opt_ast = _closure(func);
+    AstList *list = boost::get<AstList>(&opt_ast->_content);
+    if (list)
+      list->_mergeable = true;
+
+    return ast << opt_ast;
+  }
+
 };
 
 #define RETURN_IF_EXC(ast) if (boost::get<AstException>(&ast->_content)) return ast
@@ -718,7 +769,9 @@ public:
 	  }); if (success) return ast;
 	ast << _option(success, [this] () {
 	    AstPtr ast = std::make_shared<Ast>();
-	    ast << _token("bar"); RETURN_IF_EXC(ast);
+	    ast << _token("ba"); RETURN_IF_EXC(ast);
+	    ast << _cut();
+	    ast << _token("r"); RETURN_IF_EXC(ast);
 	    return ast;
 	  }); if (success) return ast;
 	ast << _option(success, [this] () {
@@ -729,6 +782,18 @@ public:
 	ast << _error<FailedParse>("expecting one of: foo bar baz");
 	return ast;
       }); RETURN_IF_EXC(ast);
+
+    ast << _positive_closure([this] () {
+	AstPtr ast = std::make_shared<Ast>();
+	ast << _token("tro"); RETURN_IF_EXC(ast);
+	return ast;
+      }); RETURN_IF_EXC(ast);
+    ast << _closure([this] () {
+	AstPtr ast = std::make_shared<Ast>();
+	ast << _token("lo"); RETURN_IF_EXC(ast);
+	return ast;
+      }); RETURN_IF_EXC(ast);
+
 
     // ast << _fail();
 
