@@ -15,6 +15,7 @@ class GrakoException : std::exception
 {
 };
 
+
 class ParseError : public GrakoException
 {
 };
@@ -267,16 +268,20 @@ public:
 };
 
 
-/* Poor man's XML library.  */
 class Ast
 {
 public:
-  Ast() : _content(AstNone()) {}
-  Ast(const AstString& str) : _content(str) {}
-  Ast(const AstList& list) : _content(list) {}
-  Ast(const AstMap& map) : _content(map) {}
-  Ast(const AstException& exc) : _content(exc) {}
+  Ast() : _content(AstNone()), _cut(false) {}
+  Ast(const AstString& str) : _content(str), _cut(false) {}
+  Ast(const AstList& list) : _content(list), _cut(false) {}
+  Ast(const AstMap& map) : _content(map), _cut(false) {}
+  Ast(const AstException& exc) : _content(exc), _cut(false) {}
+
+  /* Payload variants.  */
   boost::variant<AstNone, AstString, AstList, AstMap, AstException> _content;
+
+  /* This is set if a cut was encountered during parsing.  */
+  bool _cut;
 
   /* Concrete nodes use AstNone, AstString and AstList.  Abstract nodes
      use AstMap.  */
@@ -357,7 +362,8 @@ public:
 
     void operator() (AstNone& none)
     {
-      /* None addend is ignored, can happen with lookaheads, for example.  */
+      /* None addend is ignored (except for cut flag), can happen with
+	 lookaheads, for example.  */
     }
 
     void operator() (AstString& str)
@@ -388,6 +394,13 @@ public:
   void add (const AstPtr& addend)
   {
     AstAdder adder(*this, addend);
+    /* If the cut flag was encountered in the addend, make sure it is
+       set for the augend, too.  Note that this can leave dangling
+       _cut flags being true in child nodes of the AST (for example,
+       if a map is added to a list).  This is not a problem, as they
+       are never checked.  */
+    if (addend->_cut)
+      _cut = true;
     boost::apply_visitor(adder, addend->_content);
   }
 
@@ -535,6 +548,11 @@ public:
     return ast;
   }
 
+  AstPtr _fail()
+  {
+    return _error<FailedParse>("fail");
+  }
+
   AstPtr _check_eof()
   {
     _buffer.next_token();
@@ -553,6 +571,68 @@ public:
     // _trace_match(token);
     AstPtr node = std::make_shared<Ast>(token);
     return node;
+  }
+
+
+  /* In case of an exception, the parser state is unmodified (useful
+     to implement choices etc.)  */
+  AstPtr _try(std::function<AstPtr ()> func)
+  {
+    size_t pos = _buffer._pos;
+    state_t state = _state;
+    AstPtr ast = func();
+    if (boost::get<AstException>(&ast->_content))
+      {
+	_state = state;
+	_buffer._pos = pos;
+      }
+    return ast;
+  }
+
+  AstPtr _option(bool &success, std::function<AstPtr ()> func)
+  {
+    /* Sets success to true if succeeds (otherwise does not touch it).  */
+    AstPtr ast = _try(func);
+    if (boost::get<AstException>(&ast->_content))
+      {
+	if (ast->_cut)
+	  /* Failed cut exceptions are propagated with _cut set to
+	     true.  This is equivalent to nested FailedCut exceptions
+	     in Grako.  */
+	  return ast;
+	else
+	  /* Other exceptions are ignored (normal failed option), but
+	     don't report success.  */
+	  return std::make_shared<Ast>();
+      }
+    else
+      {
+	success = true;
+	/* Forget the cut status after a successful parse.  */
+	ast->_cut = false;
+      }
+    return ast;
+  }
+
+  AstPtr _choice(std::function<AstPtr ()> func)
+  {
+    /* There is totally nothing to do here :)  */
+    AstPtr ast = _try(func);
+    return ast;
+  }
+
+  AstPtr _optional(std::function<AstPtr ()> func)
+  {
+    // AstPtr ast = _choice([this, &func] () {
+    // 	AstPtr ast = std::make_shared<Ast>();
+    // 	bool success = false;
+    // 	ast << _option(success, func);
+    // 	return ast;
+    //   });
+    // return ast;
+    // identical to:
+    bool success = false;
+    return _option(success, func);
   }
 
   AstPtr _group(std::function<AstPtr ()> func)
@@ -596,37 +676,9 @@ public:
       return _error<FailedLookahead>("");
   }
 
-  void _try(std::function<void ()> func)
-  {
-    size_t pos = _buffer._pos;
-    state_t state = _state;
-    // ast_copy = self.ast._copy()
-    // self._push_ast()
-    // self.last_node = None
-    try
-      {
-	//self.ast = ast_copy
-	func();
-	//ast = self.ast
-	//cst = self.cst
-      }
-    catch (...)
-      {
-	_buffer.go_to(pos);
-	_state = state;
-	throw;
-      }
-    //finally:
-    //   self._pop_ast()
-    //self.ast = ast
-    //self._extend_cst(cst)
-    //self.last_node = cst
-  }
-
 };
 
 #define RETURN_IF_EXC(ast) if (boost::get<AstException>(&ast->_content)) return ast
-
 
 /* This stuff is generated.  */
 class MyParser : public Parser
@@ -655,6 +707,30 @@ public:
 	return ast;
       }); RETURN_IF_EXC(ast);
     ast << _token("bar"); RETURN_IF_EXC(ast);
+
+    ast << _choice([this] () {
+	AstPtr ast = std::make_shared<Ast>();
+	bool success = false;
+	ast << _option(success, [this] () {
+	    AstPtr ast = std::make_shared<Ast>();
+	    ast << _token("foo"); RETURN_IF_EXC(ast);
+	    return ast;
+	  }); if (success) return ast;
+	ast << _option(success, [this] () {
+	    AstPtr ast = std::make_shared<Ast>();
+	    ast << _token("bar"); RETURN_IF_EXC(ast);
+	    return ast;
+	  }); if (success) return ast;
+	ast << _option(success, [this] () {
+	    AstPtr ast = std::make_shared<Ast>();
+	    ast << _token("baz"); RETURN_IF_EXC(ast);
+	    return ast;
+	  }); if (success) return ast;
+	ast << _error<FailedParse>("expecting one of: foo bar baz");
+	return ast;
+      }); RETURN_IF_EXC(ast);
+
+    // ast << _fail();
 
     return ast;
 
