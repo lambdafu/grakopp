@@ -1,3 +1,7 @@
+/* OPTIMIZATION: Somehow use templating to make grammar rules with
+   lambda better inline-optimizable (sim. to C++ map).  */
+/* OPTIMIZATION: Instead of rule names, use an int index into an array...*/
+
 #include <string>
 #include <cctype>
 #include <functional>
@@ -44,7 +48,7 @@ public:
   }
   void _throw() { throw *this; }
 };
-  
+
 class FailedToken : public FailedParseBase
 {
 public:
@@ -84,7 +88,7 @@ public:
 
   const std::string _text;
   size_t _pos;
-  
+
   size_t len() const
   {
     return _text.length();
@@ -101,7 +105,7 @@ public:
       || _text[_pos] == '\r'
       || _text[_pos] == '\n';
   }
-  
+
   CHAR_T current() const
   {
     if (atend())
@@ -178,7 +182,7 @@ public:
   {
     return skip_to('\n');
   }
-  
+
   bool is_space()
   {
     return false;
@@ -202,9 +206,9 @@ public:
       }
     return false;
   }
-  
+
 };
-  
+
 typedef int state_t;
 
 /* Simple container for parser exceptions, to avoid ambiguities in the
@@ -303,7 +307,7 @@ public:
 	: _augend(augend), _addend(addend), _mergeable(mergeable)
       {
       }
-      
+
       Ast& _augend;
       const AstPtr& _addend;
       bool _mergeable;
@@ -390,7 +394,7 @@ public:
       _augend._content = exc;
     }
   };
-  
+
   void add (const AstPtr& addend)
   {
     AstAdder adder(*this, addend);
@@ -486,7 +490,7 @@ std::ostream& operator<< (std::ostream& cout, const Ast& ast)
     {
       bool first = true;
       _cout << "[\n";
-      for (auto child: list)
+      for (auto& child: list)
 	{
 	  if (first)
 	    first = false;
@@ -501,7 +505,7 @@ std::ostream& operator<< (std::ostream& cout, const Ast& ast)
     {
       bool first = true;
       _cout << "{\n";
-      for (auto key: map._order)
+      for (auto& key: map._order)
 	{
 	  if (first)
 	    first = false;
@@ -529,15 +533,19 @@ class Parser
 {
 public:
   Parser(Buffer& buffer)
-    : _buffer(buffer)
+    : _buffer(buffer), _state(0)
   {
   }
 
   Buffer& _buffer;
 
+  /* We sort by position first, because we can then optimize the cut
+     operator.  However, if you use an unordered map here, remember to
+     iterate over all items in the cut operator.  */
   using memo_key_t = std::tuple<size_t, std::string, state_t>;
   using memo_value_t = std::tuple<AstPtr, size_t, state_t>;
   std::map<memo_key_t, memo_value_t> _memoization_cache;
+
   state_t _state;
 
   template<typename T>
@@ -547,6 +555,61 @@ public:
     AstPtr ast = std::make_shared<Ast>(exc);
     return ast;
   }
+
+  AstPtr _call(std::string name, std::function<AstPtr ()> func)
+  {
+    size_t pos = _buffer._pos;
+    state_t& state = _state;
+    memo_key_t key(pos, name, state);
+
+    {
+      /* Check memoization cache.  */
+      auto cache = _memoization_cache.find(key);
+      if (cache != _memoization_cache.end())
+	{
+	  /* TODO: Trace.  */
+	  memo_value_t& value = cache->second;
+	  _buffer._pos = std::get<1>(value);
+	  _state = std::get<2>(value);
+	  return std::get<0>(value);
+	}
+    }
+
+    //if name[0].islower():
+    //  self._next_token()
+
+    /* Call rule.  */
+    AstPtr ast = func();
+
+    //if self.parseinfo:
+    //  node._add('_parseinfo', ParseInfo(self._buffer, name, pos, self._pos))
+
+    /* Maybe override the AST.  */
+    AstMap *map = boost::get<AstMap>(&ast->_content);
+    if (map)
+      {
+	auto el = map->find("@");
+	if (el != map->end())
+	  ast = el->second;
+      }
+
+    size_t next_pos = _buffer._pos;
+    /* FIXME: Apply semantics.  */
+    state_t& next_state = state;
+
+    /* Fill memoization cache.  FIXME: Check "don't memo lookaheads" flag). */
+    memo_value_t value (ast, next_pos, next_state);
+    _memoization_cache[key] = value;
+
+    AstException *exc = boost::get<AstException>(&ast->_content);
+    if (exc)
+      _buffer._pos = pos;
+    else
+      _state = next_state;
+    return ast;
+  }
+
+
 
   AstPtr _fail()
   {
@@ -568,8 +631,25 @@ public:
     AstPtr ast = std::make_shared<Ast>();
     ast->_cut = true;
 
-    /* TODO: Kill memoization cache.  */
+    /* Grako:
 
+       "Kota Mizushima et al say that we can throw away memos for
+       previous positions in the buffer under certain circumstances,
+       without affecting the linearity of PEG parsing.
+       http://goo.gl/VaGpj
+
+       We adopt the heuristic of always dropping the cache for
+       positions less than the current cut position. It remains to be
+       proven if doing it this way affects linearity. Empirically, it
+       hasn't."  */
+
+    size_t cutpos = _buffer._pos;
+    /* This is a bit cheesy, but it'll work.  We need a string larger
+       than all valid strings (and state doesn't matter then).  */
+    memo_key_t last_key(cutpos, "\xff", state_t());
+    auto upper = _memoization_cache.upper_bound(last_key);
+    // std::cout << "Dropping " << std::distance(_memoization_cache.begin(),upper) << "\n";
+    _memoization_cache.erase(_memoization_cache.begin(), upper);
     return ast;
   }
 
@@ -630,10 +710,10 @@ public:
   AstPtr _optional(std::function<AstPtr ()> func)
   {
     // AstPtr ast = _choice([this, &func] () {
-    // 	AstPtr ast = std::make_shared<Ast>();
-    // 	bool success = false;
-    // 	ast << _option(success, func);
-    // 	return ast;
+    //	AstPtr ast = std::make_shared<Ast>();
+    //	bool success = false;
+    //	ast << _option(success, func);
+    //	return ast;
     //   });
     // return ast;
     // identical to:
@@ -740,11 +820,29 @@ public:
   {
   }
 
+  AstPtr rule_one()
+  {
+    AstPtr ast = std::make_shared<Ast>
+      (AstMap({
+	  { "foo", AST_DEFAULT },
+	    { "@", AST_FORCELIST }
+	}));
+
+    (*ast)["foo"] = _token("foo"); RETURN_IF_EXC(ast);
+    (*ast)["@"] = _token("bar"); RETURN_IF_EXC(ast);
+    ast << _token("baz"); RETURN_IF_EXC(ast);
+    ast << _check_eof(); RETURN_IF_EXC(ast);
+    return ast;
+  };
+
   AstPtr startrule()
   {
+    // AstPtr ast = std::make_shared<Ast>();
+    // ast << _call("rule_one", [this] () { return this->rule_one(); }); RETURN_IF_EXC(ast);
+    // return ast;
+
     /* This is generated for concrete rules.  */
     AstPtr ast = std::make_shared<Ast>();
-
     ast << _ifnot([this] () {
 	AstPtr ast = std::make_shared<Ast>();
 	ast << _token("g"); RETURN_IF_EXC(ast);
@@ -802,9 +900,9 @@ public:
     /* This is generated for abstract rules.  */
     // AstPtr ast = std::make_shared<Ast>
     //   (AstMap({
-    // 	  { "foo", AST_DEFAULT },
+    //	  { "foo", AST_DEFAULT },
     //       { "bar", AST_FORCELIST }
-    // 	}));
+    //	}));
 
     // (*ast)["foo"] = _token("foo"); RETURN_IF_EXC(ast);
     // (*ast)["bar"] = _token("bar"); RETURN_IF_EXC(ast);
