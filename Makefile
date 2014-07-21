@@ -1,4 +1,4 @@
-CXXFLAGS=-std=c++11 -Wall -g
+CXXFLAGS=-std=c++11 -Wall -g -I.
 LDFLAGS=-lboost_regex
 
 all: grakopp
