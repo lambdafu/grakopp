@@ -11,7 +11,28 @@
 #include <memory>
 #include <iostream>
 #include <assert.h>
+#include <features.h>
 
+#if (! defined(__GNUC__)) || __GNUC_PREREQ (4,9) || __clang__
+#include <regex>
+#else
+#include <boost/regex.hpp>
+namespace std
+{
+  using boost::regex;
+  namespace regex_constants
+  {
+    using boost::regex_constants::match_flag_type;
+    using boost::regex_constants::match_continuous;
+    using boost::regex_constants::match_prev_avail;
+  }
+  using boost::smatch;
+  using boost::regex_search;
+}
+#endif
+
+
+#include <boost/optional.hpp>
 #include <boost/variant.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
@@ -57,6 +78,18 @@ public:
   std::ostream& output(std::ostream& cout) const
   {
     return cout << "expecting \"" << _token << "\"";
+  }
+  void _throw() { throw *this; }
+};
+
+class FailedPattern : public FailedParseBase
+{
+public:
+  FailedPattern(const std::string& pattern) : FailedParseBase(), _pattern(pattern) {}
+  const std::string _pattern;
+  std::ostream& output(std::ostream& cout) const
+  {
+    return cout << "expecting \"" << _pattern << "\"";
   }
   void _throw() { throw *this; }
 };
@@ -205,6 +238,27 @@ public:
 	return true;
       }
     return false;
+  }
+
+  boost::optional<std::string> matchre(std::string pattern)
+  {
+    boost::optional<std::string> maybe_token;
+    std::regex re(pattern);
+
+    /* Multiline is the default.  */
+    std::regex_constants::match_flag_type flags = std::regex_constants::match_continuous;
+    if (_pos > 0)
+      flags |= std::regex_constants::match_prev_avail;
+
+    std::smatch match;
+    int cnt = std::regex_search(_text.begin() + _pos, _text.end(), match, re, flags);
+    if (cnt > 0)
+      {
+	maybe_token = match[0];
+	_pos += match[0].length();
+      }
+
+    return maybe_token;
   }
 
 };
@@ -665,6 +719,19 @@ public:
     return node;
   }
 
+  AstPtr _pattern(const std::string& pattern)
+  {
+    boost::optional<std::string> maybe_token = _buffer.matchre(pattern);
+    if (! maybe_token)
+      {
+	return _error<FailedPattern>(pattern);
+      }
+    const std::string& token = *maybe_token;
+    // _trace_match(token);
+    AstPtr node = std::make_shared<Ast>(token);
+    return node;
+  }
+
   /* In case of an exception, the parser state is unmodified (useful
      to implement choices etc.)  The exception is passed through anyway!  */
   AstPtr _try(std::function<AstPtr ()> func)
@@ -843,6 +910,8 @@ public:
 
     /* This is generated for concrete rules.  */
     AstPtr ast = std::make_shared<Ast>();
+
+    ast << _pattern("[a-z]"); RETURN_IF_EXC(ast);
     ast << _ifnot([this] () {
 	AstPtr ast = std::make_shared<Ast>();
 	ast << _token("g"); RETURN_IF_EXC(ast);
