@@ -365,9 +365,15 @@ class Grammar(Base):
             self.get_renderer(rule).render() for rule in self.node.rules
         ])
 
+        findruleitems = '\n'.join([
+            '{ "%s", &%sParser::_%s_ },' % (rule.name, fields['name'], rule.name)
+            for rule in self.node.rules
+        ])
+
         version = str(tuple(int(n) for n in str(timestamp()).split('.')))
 
         fields.update(rules=indent(rules),
+                      findruleitems=indent(findruleitems),
                       abstract_rules=abstract_rules,
                       version=version,
                       whitespace=whitespace,
@@ -403,6 +409,18 @@ class Grammar(Base):
                     {name}Parser(Buffer& buffer, std::string whitespace={whitespace}, std::string nameguard={nameguard})
                         : Parser(buffer, whitespace, nameguard) {{ }}
 
+                    typedef AstPtr ({name}Parser::*rule_method_t) ();
+                    rule_method_t find_rule(const std::string& name)
+                    {{
+                        std::map<std::string, rule_method_t> map({{
+                {findruleitems:3::}
+                        }});
+                        auto el = map.find(name);
+                        if (el != map.end())
+                            return el->second;
+                        return 0;
+                    }}
+
                 {rules}
                 }};
 
@@ -421,7 +439,8 @@ class Grammar(Base):
 
                     try
                     {{
-                        AstPtr ast = parser._document_();
+                        {name}Parser::rule_method_t rule = parser.find_rule(startrule);
+                        AstPtr ast = (parser.*rule)();
                         std::cout << *ast << "\\n";
                         AstException *exc = boost::get<AstException>(&ast->_content);
                         if (exc)

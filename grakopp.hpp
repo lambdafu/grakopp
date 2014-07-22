@@ -308,6 +308,8 @@ class AstMap : public std::map<std::string, AstPtr>
 public:
   std::vector<std::string> _order;
 
+  AstMap() {}
+
   AstMap(std::vector<std::pair<std::string, int>> keys)
   {
     for (auto pair: keys)
@@ -468,18 +470,31 @@ public:
     mapped_type(Ast& ast, const char *key) : _ast(ast), _key(key) {}
     Ast& _ast;
     std::string _key;
-    const AstPtr& operator<<(const AstPtr& value)
+    mapped_type& operator<<(const AstPtr& value)
     {
       AstException *exc = boost::get<AstException>(&value->_content);
       if (exc)
 	_ast._content = *exc;
       else
 	{
-	  AstMap& map = boost::get<AstMap>(_ast._content);
+	  AstMap* map = boost::get<AstMap>(&_ast._content);
+
+	  if (!map)
+	    {
+	      /* Coerce left side to a map.  This covers nested named items, such as
+		 "rule = ( name: value );".  */
+	      _ast._content = AstMap();
+	      map = boost::get<AstMap>(&_ast._content);
+	    }
+
+	  /* Also in the nested name case, the key may not already exist.  */
+	  if (map->count(_key) == 0)
+	    (*map)[_key] = std::make_shared<Ast>();
+
 	  /* Extend the existing value.  */
-	  map.at(_key) << value;
+	  map->at(_key) << value;
 	}
-      return value;
+      return *this;
     }
 
   };

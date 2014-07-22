@@ -10,6 +10,37 @@ public:
   {
   }
 
+  typedef AstPtr (MyParser::*rule_method_t) ();
+  rule_method_t find_rule(const std::string& name)
+  {
+    std::map<std::string, rule_method_t> map({
+	{ "rule_one", &MyParser::rule_one },
+	{ "rule_h1", &MyParser::rule_h1 },
+	{ "startrule", &MyParser::startrule }
+      });
+    auto el = map.find(name);
+    if (el != map.end())
+      return el->second;
+    return 0;
+  }
+
+  AstPtr rule_h1()
+  {
+    AstPtr ast = std::make_shared<Ast>();
+    ast << _call("h1", [this] () {
+      AstPtr ast = std::make_shared<Ast>();
+      ast << _token(R"(=)"); RETURN_IF_EXC(ast);
+      (*ast)["@"] << [this] () {
+	AstPtr ast = std::make_shared<Ast>();
+	ast << _pattern(R"([a-z]*)"); RETURN_IF_EXC(ast);
+	return ast;
+      }(); RETURN_IF_EXC(ast);
+      ast << _token(R"(=)"); RETURN_IF_EXC(ast);
+      return ast;
+    }); RETURN_IF_EXC(ast);
+    return ast;
+  }
+
   AstPtr rule_one()
   {
     AstPtr ast = std::make_shared<Ast>
@@ -117,12 +148,13 @@ public:
 int
 main(int argc, char *argv[])
 {
-  Buffer buf(argv[1]);
+  Buffer buf(argv[2]);
   MyParser parser(buf);
 
   try
     {
-      AstPtr ast = parser.startrule();
+      MyParser::rule_method_t rule = parser.find_rule(argv[1]);
+      AstPtr ast = (parser.*rule)();
       std::cout << *ast << "\n";
       AstException *exc = boost::get<AstException>(&ast->_content);
       if (exc)

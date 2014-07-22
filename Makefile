@@ -3,5 +3,7 @@ LDFLAGS=-lboost_regex
 
 all: grakopp
 
+grakopp: grakopp.hpp grakopp.cpp
+
 clang:
-	~/external/extern/llvm/bin/clang++ -v -std=c++11 -stdlib=libc++  grakopp.cpp -o grakopp
+	~/external/extern/llvm/bin/clang++ -I. -std=c++11 -stdlib=libc++  grakopp.cpp -o grakopp
