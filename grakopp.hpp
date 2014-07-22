@@ -12,6 +12,9 @@
 #include <iostream>
 #include <assert.h>
 #include <features.h>
+#include <fstream>
+#include <cerrno>
+
 
 #if (! defined(__GNUC__)) || __GNUC_PREREQ (4,9) || __clang__
 #include <regex>
@@ -114,12 +117,32 @@ typedef char CHAR_T;
 class Buffer
 {
 public:
+
+  Buffer()
+    : _pos(0)
+  {
+  }
+
   Buffer(const std::string &text)
     : _text(text), _pos(0)
   {
   }
 
-  const std::string _text;
+  void from_file(const char *filename)
+  {
+    std::ifstream in(filename, std::ios::in | std::ios::binary);
+    if (in)
+      {
+	std::ostringstream contents;
+	contents << in.rdbuf();
+	in.close();
+	_text = contents.str();
+	return;
+      }
+    throw(errno);
+  }
+
+  std::string _text;
   size_t _pos;
 
   size_t len() const
@@ -251,7 +274,7 @@ public:
       flags |= std::regex_constants::match_prev_avail;
 
     std::smatch match;
-    int cnt = std::regex_search(_text.begin() + _pos, _text.end(), match, re, flags);
+    int cnt = std::regex_search(_text.cbegin() + _pos, _text.cend(), match, re, flags);
     if (cnt > 0)
       {
 	maybe_token = match[0];

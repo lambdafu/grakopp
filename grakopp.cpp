@@ -148,12 +148,14 @@ public:
 int
 main(int argc, char *argv[])
 {
-  Buffer buf(argv[2]);
+  Buffer buf;
   MyParser parser(buf);
+
+  buf.from_file(argv[1]);
 
   try
     {
-      MyParser::rule_method_t rule = parser.find_rule(argv[1]);
+      MyParser::rule_method_t rule = parser.find_rule(argv[2]);
       AstPtr ast = (parser.*rule)();
       std::cout << *ast << "\n";
       AstException *exc = boost::get<AstException>(&ast->_content);

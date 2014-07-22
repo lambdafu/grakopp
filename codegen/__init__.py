@@ -433,8 +433,10 @@ class Grammar(Base):
                 int
                 main(int argc, char *argv[])
                 {{
-                    std::string startrule(argv[1]);
-                    Buffer buf(argv[2]);
+                    Buffer buf;
+                    std::string startrule(argv[2]);
+
+                    buf.from_file(argv[1]);
                     {name}Parser parser(buf);
 
                     try
