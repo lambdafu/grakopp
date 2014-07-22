@@ -1,4 +1,4 @@
-GRAKO++ - A packrat parser runtime for Grako in C++
+Grako++ - A packrat parser runtime for Grako in C++
 Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
 Written by Marcus Brinkmann <m.brinkmann@semantics.de>
 
