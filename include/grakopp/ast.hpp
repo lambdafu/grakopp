@@ -10,6 +10,18 @@
 #ifndef _GRAKOPP_AST_HPP
 #define _GRAKOPP_AST_HPP 1
 
+#include <string>
+#include <list>
+#include <map>
+#include <iostream>
+#include <memory>
+
+#include <boost/variant.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
+#include <assert.h>
+
+#include "exceptions.hpp"
 
 /* Simple container for parser exceptions, to avoid ambiguities in the
    boost::variant.  */

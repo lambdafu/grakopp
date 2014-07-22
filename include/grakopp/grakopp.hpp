@@ -10,19 +10,6 @@
 #ifndef _GRAKOPP_GRAKOPP_HPP
 #define _GRAKOPP_GRAKOPP_HPP 1
 
-#include <functional>
-#include <stack>
-#include <map>
-#include <list>
-#include <memory>
-#include <iostream>
-#include <assert.h>
-
-#include <boost/optional.hpp>
-#include <boost/variant.hpp>
-#include <boost/algorithm/string/replace.hpp>
-
-
 #include "buffer.hpp"
 #include "exceptions.hpp"
 #include "ast.hpp"

@@ -10,6 +10,15 @@
 #ifndef _GRAKOPP_PARSER_HPP
 #define _GRAKOPP_PARSER_HPP 1
 
+#include <functional>
+#include <string>
+#include <map>
+
+#include "exceptions.hpp"
+#include "buffer.hpp"
+#include "ast.hpp"
+
+
 /* FIXME: For now.  */
 typedef int state_t;
 

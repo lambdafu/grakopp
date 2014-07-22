@@ -17,6 +17,8 @@
 #include <sstream>
 #include <cerrno>
 
+#include <boost/optional.hpp>
+
 /* Use std::regex, except where it is not available (then import
    boost::regex into the std namespace).  */
 
