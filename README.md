@@ -12,9 +12,7 @@ Differences to Grako
 
 * The output is always AST/JSON.
 * The semantics class has to be implemented in C++ as well.
-* The regular expression syntax is ECMAScript_, not Python.
-
-.. _`ECMAScript`: http://www.cplusplus.com/reference/regex/ECMAScript/
+* The regular expression syntax is [ECMAScript](http://www.cplusplus.com/reference/regex/ECMAScript/), not Python.
 
 TODO
 ----
