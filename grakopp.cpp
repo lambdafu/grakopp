@@ -1,4 +1,4 @@
-#include <grakopp.hpp>
+#include <grakopp/grakopp.hpp>
 
 /* This stuff is generated.  */
 class MyParser : public Parser

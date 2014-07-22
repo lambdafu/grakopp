@@ -399,7 +399,7 @@ class Grammar(Base):
                    the file is generated.
                 */
 
-                #include <grakopp.hpp>
+                #include <grakopp/grakopp.hpp>
 
                 // version__ = {version}
 
