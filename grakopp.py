@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# This code is based on grako/tool.py
+
 """
 Parse and translate an EBNF grammar into a C++ parser for
 the described language.

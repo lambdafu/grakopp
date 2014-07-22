@@ -1,3 +1,5 @@
+# This code is based on Grako's code generators.
+
 # FIX:
 # named items map stuff
 # cpp_repr  "...\'..."..."  bah!
