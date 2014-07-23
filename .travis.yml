@@ -35,7 +35,7 @@ install:
 script:
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~
+  - ~/bin/cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~
   - make 
   - make test
   - make install
