@@ -1,0 +1,40 @@
+language: python
+python:
+  - "2.7"
+  - "3.3"
+compiler:
+  - gcc
+  - clang
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq 
+install:
+  # install gcc-4.8 with c++11 support: https://github.com/travis-ci-tester/travis-test-gcc-cxx-11
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  - sudo apt-get update
+  - sudo apt-get install g++-4.8
+  # https://github.com/travis-ci-tester/travis-test-clang-cxx-11
+  - sudo apt-get install libstdc++-4.8-dev
+  # install cmake
+  - CMAKE_VERSION="3.0.0"
+  - wget "http://www.cmake.org/files/v3.0/cmake-${CMAKE_VERSION}.tar.gz"
+  - openssl sha1 "cmake-${CMAKE_VERSION}.tar.gz"
+  - tar xf "cmake-${CMAKE_VERSION}.tar.gz"
+  - cd "cmake-${CMAKE_VERSION}"
+  - ./bootstrap --prefix ~
+  - export PATH="~/bin:${PATH}"
+  - cd ..
+  # verify installed versions
+  - which cmake
+  - cmake --version
+  - which g++
+  - g++ -v
+  - which clang
+  - clang -v
+  # Install grako
+  - pip install -q grako==3.3.0 --use-mirrors
+script:
+  - cmake
+  - make -DCMAKE_INSTALL_PREFIX:PATH=~
+  - make test
+  - make install
