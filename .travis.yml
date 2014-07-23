@@ -28,7 +28,7 @@ install:
   - g++ -v
   - which clang
   - clang -v
-  # Install grako
+  # Install grako.
   - pip install -q grako==3.3.0 --use-mirrors
 script:
   - cmake
