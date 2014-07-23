@@ -19,6 +19,8 @@ install:
   - tar xf "cmake-${CMAKE_VERSION}.tar.gz"
   - cd "cmake-${CMAKE_VERSION}"
   - ./bootstrap --prefix=~
+  - make
+  - make install
   - export PATH="~/bin:${PATH}"
   - cd ..
   # verify installed versions
