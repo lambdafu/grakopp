@@ -18,7 +18,7 @@ install:
   - openssl sha1 "cmake-${CMAKE_VERSION}.tar.gz"
   - tar xf "cmake-${CMAKE_VERSION}.tar.gz"
   - cd "cmake-${CMAKE_VERSION}"
-  - ./bootstrap --prefix ~
+  - ./bootstrap --prefix=~
   - export PATH="~/bin:${PATH}"
   - cd ..
   # verify installed versions
@@ -28,6 +28,8 @@ install:
   - g++ -v
   - which clang
   - clang -v
+  # Instal dependencies.
+  - sudo apt-get install libboost-dev
   # Install grako.
   - pip install -q grako==3.3.0 --use-mirrors
 script:
