@@ -35,7 +35,7 @@ target_include_directories(libgrakopp INTERFACE ${Boost_INCLUDE_DIRS}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_compile_options(libgrakopp INTERFACE ${GCC_STD_OPTION} ${CLANG_STDLIB_OPTION})
-target_link_libraries(libgrakopp INTERFACE ${CLANG_STDLIB_OPTION})
+target_link_libraries(libgrakopp INTERFACE ${Boost_REGEX_LIBRARY} ${CLANG_STDLIB_OPTION})
 
 install(TARGETS libgrakopp EXPORT libgrakoppExport)
 install(EXPORT libgrakoppExport NAMESPACE Upstream::
@@ -50,5 +50,8 @@ install(FILES
 
 # Small test program.
 add_executable(grakopp-demo grakopp-demo.cpp)
-target_include_directories(grakopp-demo PRIVATE ${Boost_INCLUDE_DIRS} libgrakopp)
-target_link_libraries(grakopp-demo ${Boost_REGEX_LIBRARY} libgrakopp)
+target_include_directories(grakopp-demo PRIVATE libgrakopp)
+target_link_libraries(grakopp-demo libgrakopp)
+
+enable_testing()
+add_subdirectory(tests)
