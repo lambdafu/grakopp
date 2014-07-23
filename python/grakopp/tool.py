@@ -1,15 +1,23 @@
-# -*- coding: utf-8 -*-
-# This code is based on grako/tool.py
+# python/grakopp/codegen.py - Grako++ code generator backend for grako -*- coding: utf-8 -*-
+# Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
+# Written by Marcus Brinkmann <m.brinkmann@semantics.de>
+#
+# This file is part of Grako++.  Grako++ is free software; you can
+# redistribute it and/or modify it under the terms of the 2-clause
+# BSD license, see file LICENSE.TXT.
+
+# This file is mostly identical to grako/tool.py.
 
 """
 Parse and translate an EBNF grammar into a C++ parser for
 the described language.
 """
+
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import grako
-from codegen import codegen
+from . codegen import codegen
 
 
 # From grako.tool:

@@ -49,6 +49,6 @@ install(FILES
   DESTINATION include/grakopp)
 
 # Small test program.
-add_executable(grakopp grakopp.cpp)
-target_include_directories(grakopp PRIVATE ${Boost_INCLUDE_DIRS} libgrakopp)
-target_link_libraries(grakopp ${Boost_REGEX_LIBRARY} libgrakopp)
+add_executable(grakopp-demo grakopp-demo.cpp)
+target_include_directories(grakopp-demo PRIVATE ${Boost_INCLUDE_DIRS} libgrakopp)
+target_link_libraries(grakopp-demo ${Boost_REGEX_LIBRARY} libgrakopp)

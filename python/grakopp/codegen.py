@@ -1,14 +1,20 @@
-# This code is based on Grako's code generators.
+# python/grakopp/codegen.py - Grako++ code generator backend for grako -*- coding: utf-8 -*-
+# Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
+# Written by Marcus Brinkmann <m.brinkmann@semantics.de>
+#
+# This file is part of Grako++.  Grako++ is free software; you can
+# redistribute it and/or modify it under the terms of the 2-clause
+# BSD license, see file LICENSE.TXT.
+b
 
-# FIX:
-# named items map stuff
-# cpp_repr  "...\'..."..."  bah!
+# The Python parts in this file is based on Grako's code generators.
 
-# -*- coding: utf-8 -*-
 """
 C++ code generation for models defined with grako.model
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import keyword
 
