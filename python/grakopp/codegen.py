@@ -5,16 +5,15 @@
 # This file is part of Grako++.  Grako++ is free software; you can
 # redistribute it and/or modify it under the terms of the 2-clause
 # BSD license, see file LICENSE.TXT.
-b
 
 # The Python parts in this file is based on Grako's code generators.
+
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 """
 C++ code generation for models defined with grako.model
 """
-
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
 
 import keyword
 
