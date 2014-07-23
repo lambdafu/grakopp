@@ -1,5 +1,7 @@
 **Work in progress!**
 
+[![Build Status](https://travis-ci.org/lambdafu/grakopp.png)](https://travis-ci.org/lambdafu/grakopp)
+
 Grako++
 =======
 
