@@ -31,9 +31,11 @@ install:
   # Instal dependencies.
   - sudo apt-get install libboost-dev
   # Install grako.
-  - pip install --user grako==3.3.0
+  - pip install -q --user grako==3.3.0
 script:
-  - cmake
-  - make -DCMAKE_INSTALL_PREFIX:PATH=~
+  - mkdir build
+  - cd build
+  - cmake .. -DCMAKE_INSTALL_PREFIX:PATH=~
+  - make 
   - make test
   - make install
