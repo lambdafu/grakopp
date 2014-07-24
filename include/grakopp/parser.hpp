@@ -28,14 +28,17 @@ typedef int state_t;
 class Parser
 {
 public:
-  Parser(Buffer& buffer, std::string whitespace="",
-	   std::string nameguard="")
-    : _buffer(buffer), _state(0),
-      _whitespace(whitespace), _nameguard(nameguard)
-  {
-  }
+  Parser()
+    : _whitespace(" \t\r\n\x0b\x0c"),
+      _nameguard_set(false), _nameguard(true),
+      _state(0) { }
 
-  Buffer& _buffer;
+  BufferPtr _buffer;
+  std::string _whitespace;
+  bool _nameguard_set;
+  bool _nameguard;
+  
+  state_t _state;
 
   /* We sort by position first, because we can then optimize the cut
      operator.  However, if you use an unordered map here, remember to
@@ -44,11 +47,36 @@ public:
   using memo_value_t = std::tuple<AstPtr, size_t, state_t>;
   std::map<memo_key_t, memo_value_t> _memoization_cache;
 
-  state_t _state;
+  void _update_buffer()
+  {
+    if (!_buffer)
+      return;
+    _buffer->_whitespace = _whitespace;
+    _buffer->_nameguard = _nameguard;
+    _buffer->_pos = 0;
+  }
 
-  std::string _whitespace;
-  std::string _nameguard;
+  void set_buffer(const BufferPtr& buffer)
+  {
+    _buffer = buffer;
+    _update_buffer();
+  }
 
+  void set_whitespace(const std::string& whitespace)
+  {
+    _whitespace = whitespace;
+    /* Reset the default for _nameguard, if not set explicitely.  */
+    if (! _nameguard_set)
+      _nameguard = _whitespace.length() > 0;
+    _update_buffer();
+  }
+
+  void set_nameguard(bool nameguard)
+  {
+    _nameguard_set = true;
+    _nameguard = nameguard;
+    _update_buffer();
+  }
 
   template<typename T>
   AstPtr _error(std::string msg)
@@ -60,7 +88,7 @@ public:
 
   AstPtr _call(std::string name, std::function<AstPtr ()> func)
   {
-    size_t pos = _buffer._pos;
+    size_t pos = _buffer->_pos;
     state_t& state = _state;
     memo_key_t key(pos, name, state);
 
@@ -71,7 +99,7 @@ public:
 	{
 	  /* TODO: Trace.  */
 	  memo_value_t& value = cache->second;
-	  _buffer._pos = std::get<1>(value);
+	  _buffer->_pos = std::get<1>(value);
 	  _state = std::get<2>(value);
 	  return std::get<0>(value);
 	}
@@ -95,7 +123,7 @@ public:
 	  ast = el->second;
       }
 
-    size_t next_pos = _buffer._pos;
+    size_t next_pos = _buffer->_pos;
     /* FIXME: Apply semantics.  */
     state_t& next_state = state;
 
@@ -105,7 +133,7 @@ public:
 
     AstException *exc = boost::get<AstException>(&ast->_content);
     if (exc)
-      _buffer._pos = pos;
+      _buffer->_pos = pos;
     else
       _state = next_state;
     return ast;
@@ -119,8 +147,8 @@ public:
 
   AstPtr _check_eof()
   {
-    _buffer.next_token();
-    if (! _buffer.atend())
+    _buffer->next_token();
+    if (! _buffer->atend())
       return _error<FailedParse>("Expecting end of text.");
     return std::make_shared<Ast>();
   }
@@ -144,7 +172,7 @@ public:
        proven if doing it this way affects linearity. Empirically, it
        hasn't."  */
 
-    size_t cutpos = _buffer._pos;
+    size_t cutpos = _buffer->_pos;
     /* This is a bit cheesy, but it'll work.  We need a string larger
        than all valid strings (and state doesn't matter then).  */
     memo_key_t last_key(cutpos, "\xff", state_t());
@@ -156,8 +184,8 @@ public:
 
   AstPtr _token(std::string token)
   {
-    _buffer.next_token();
-    if (! _buffer.match(token))
+    _buffer->next_token();
+    if (! _buffer->match(token))
       {
 	return _error<FailedToken>(token);
       }
@@ -168,7 +196,7 @@ public:
 
   AstPtr _pattern(const std::string& pattern)
   {
-    boost::optional<std::string> maybe_token = _buffer.matchre(pattern);
+    boost::optional<std::string> maybe_token = _buffer->matchre(pattern);
     if (! maybe_token)
       {
 	return _error<FailedPattern>(pattern);
@@ -183,13 +211,13 @@ public:
      to implement choices etc.)  The exception is passed through anyway!  */
   AstPtr _try(std::function<AstPtr ()> func)
   {
-    size_t pos = _buffer._pos;
+    size_t pos = _buffer->_pos;
     state_t state = _state;
     AstPtr ast = func();
     if (boost::get<AstException>(&ast->_content))
       {
 	_state = state;
-	_buffer._pos = pos;
+	_buffer->_pos = pos;
       }
     return ast;
   }
@@ -247,7 +275,7 @@ public:
 
   AstPtr _if(std::function<AstPtr ()> func)
   {
-    size_t pos = _buffer._pos;
+    size_t pos = _buffer->_pos;
     state_t state = _state;
     // _enter_lookahead
 
@@ -255,7 +283,7 @@ public:
 
     // _leave_lookahead
     _state = state;
-    _buffer._pos = pos;
+    _buffer->_pos = pos;
 
     /* Only pass through failures.  */
     if (boost::get<AstException>(&ast->_content))
@@ -282,11 +310,11 @@ public:
 
     do
       {
-	size_t pos = _buffer._pos;
+	size_t pos = _buffer->_pos;
 	AstPtr ast = _try(func);
 
 	/* Only if no exception! */
-	if (!boost::get<AstException>(&ast->_content) && (pos == _buffer._pos))
+	if (!boost::get<AstException>(&ast->_content) && (pos == _buffer->_pos))
 	  return _error<FailedParse>("empty closure");
 
 	if (boost::get<AstException>(&ast->_content))

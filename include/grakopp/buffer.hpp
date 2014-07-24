@@ -48,18 +48,26 @@ typedef char CHAR_T;
 #define CHAR_NULL ((CHAR_T) 0) /* Sort of.  */
 
 
+class Buffer;
+using BufferPtr = std::shared_ptr<Buffer>;
+
 class Buffer
 {
 public:
+  std::string _text;
+  size_t _pos;
+  std::string _whitespace;
+  bool _nameguard;
 
   Buffer()
-    : _pos(0)
+    : _pos(0), _whitespace(),
+      _nameguard(false)
   {
   }
 
-  Buffer(const std::string &text)
-    : _text(text), _pos(0)
+  void from_string(const std::string& text)
   {
+    _text = text;
   }
 
   void from_file(const char *filename)
@@ -75,9 +83,6 @@ public:
       }
     throw(errno);
   }
-
-  std::string _text;
-  size_t _pos;
 
   size_t len() const
   {
@@ -146,7 +151,9 @@ public:
     do
       {
 	pos = _pos;
-	/* FIXME: eatwhitespace, eatcomments.  */
+	/* FIXME: eatcomments.  */
+	if (_whitespace.length() > 0)
+	  _pos = _text.find_first_not_of(_whitespace, _pos);
       }
     while (pos != _pos);
   }
@@ -179,22 +186,43 @@ public:
     /* return self.current() in self.whitespace */
   }
 
-  bool is_name_char()
+  bool is_name_char(size_t pos)
   {
-    CHAR_T ch = this->current();
+    CHAR_T ch = this->at(pos);
     return ch != CHAR_NULL && std::isalpha(ch);
   }
 
   bool match(std::string token)
   {
     int len = token.length();
+
+    if (len == 0)
+      return true;
+
     bool eq = (_text.compare(_pos, len, token) == 0);
-    if (eq)
+    if (!eq)
+      return false;
+
+    if (_nameguard)
       {
-	move(len);
-	return true;
+	bool token_first_is_alpha = is_name_char(_pos);
+	bool follow_is_alpha = is_name_char(_pos + len);
+
+	if (token_first_is_alpha && follow_is_alpha)
+	  {
+	    /* Check if the token is alphanumeric.  */
+	    auto begin = _text.cbegin() + _pos;
+	    auto end = begin + len;
+
+	    bool token_is_alnum = find_if(begin, end, 
+					  [](char ch) { return !isalnum(ch); }) == end;
+	    if (token_is_alnum)
+	      return false;
+	  }
       }
-    return false;
+
+    move(len);
+    return true;
   }
 
   boost::optional<std::string> matchre(std::string pattern)

@@ -358,15 +358,16 @@ class Grammar(Base):
         ]
         abstract_rules = indent('\n'.join(abstract_rules))
 
-        if self.node.whitespace is None:
-            whitespace = '""'
+        if self.node.whitespace is not None:
+            whitespace = "set_whitespace(" + cpp_repr(self.node.whitespace) + ");"
         else:
-            whitespace = cpp_repr(self.node.whitespace)
+            whitespace = ""
 
-        if self.node.nameguard is None:
-            nameguard = '""'
+        if self.node.nameguard is not None:
+            nameguard = 'true' if self.node.nameguard else 'false'
+            nameguard = "set_nameguard(" + nameguard + ");"
         else:
-            nameguard = cpp_repr(self.node.nameguard)
+            nameguard = ""
 
         rules = '\n'.join([
             self.get_renderer(rule).render() for rule in self.node.rules
@@ -413,8 +414,12 @@ class Grammar(Base):
                 class {name}Parser : public Parser
                 {{
                 public:
-                    {name}Parser(Buffer& buffer, std::string whitespace={whitespace}, std::string nameguard={nameguard})
-                        : Parser(buffer, whitespace, nameguard) {{ }}
+                    {name}Parser()
+                        : Parser()
+                    {{
+                        {whitespace}
+                        {nameguard}
+                    }}
 
                     typedef AstPtr ({name}Parser::*rule_method_t) ();
                     rule_method_t find_rule(const std::string& name)
@@ -440,14 +445,15 @@ class Grammar(Base):
                 int
                 main(int argc, char *argv[])
                 {{
-                    Buffer buf;
-                    std::string startrule(argv[2]);
+                    BufferPtr buf = std::make_shared<Buffer>();
+                    {name}Parser parser;
 
-                    buf.from_file(argv[1]);
-                    {name}Parser parser(buf);
+                    buf->from_file(argv[1]);
+                    parser.set_buffer(buf);
 
                     try
                     {{
+                        std::string startrule(argv[2]);
                         {name}Parser::rule_method_t rule = parser.find_rule(startrule);
                         AstPtr ast = (parser.*rule)();
                         std::cout << *ast << "\\n";

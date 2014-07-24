@@ -37,7 +37,6 @@ Other useful option: -DCMAKE_INSTALL_PREFIX:PATH=/path/to/install
 TODO
 ----
 
-* nameguard, whitespace
 * left recursion
 * stateful parsing
 * tests

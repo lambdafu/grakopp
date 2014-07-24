@@ -5,8 +5,8 @@ class MyParser : public Parser
 {
 public:
 
-  MyParser(Buffer& buffer)
-    : Parser(buffer)
+  MyParser()
+    : Parser()
   {
   }
 
@@ -148,10 +148,11 @@ public:
 int
 main(int argc, char *argv[])
 {
-  Buffer buf;
-  MyParser parser(buf);
+  BufferPtr buf = std::make_shared<Buffer>();
+  MyParser parser;
 
-  buf.from_file(argv[1]);
+  buf->from_file(argv[1]);
+  parser.set_buffer(buf);
 
   try
     {
