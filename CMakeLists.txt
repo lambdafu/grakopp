@@ -48,6 +48,22 @@ install(FILES
   include/grakopp/parser.hpp
   DESTINATION include/grakopp)
 
+Function(peg_files whitespace nameguard)
+  Foreach(_pegFile ${ARGN})
+    String(REGEX REPLACE ".peg$" ".cpp" _cppFile "${_pegFile}")
+    If(${nameguard})
+      Set(_nameguard "")
+    Else(${nameguard})
+      Set(_nameguard "--no-nameguard")
+    EndIf(${nameguard})
+    Add_Custom_Command(
+      OUTPUT ${_cppFile}
+      COMMAND ${CMAKE_SOURCE_DIR}/grakopp --whitespace=${whitespace} ${_nameguard} ${CMAKE_CURRENT_SOURCE_DIR}/${_pegFile} > ${_cppFile}
+      DEPENDS ${_pegFile}
+      VERBATIM)
+  EndForeach(_pegFile)
+EndFunction(peg_files)
+
 # Small test program.
 add_executable(grakopp-demo grakopp-demo.cpp)
 target_include_directories(grakopp-demo PRIVATE libgrakopp)
