@@ -153,7 +153,11 @@ public:
 	pos = _pos;
 	/* FIXME: eatcomments.  */
 	if (_whitespace.length() > 0)
-	  _pos = _text.find_first_not_of(_whitespace, _pos);
+	  {
+	    size_t new_pos = _text.find_first_not_of(_whitespace, _pos);
+	    if (new_pos != std::string::npos)
+	      _pos = new_pos;
+	  }
       }
     while (pos != _pos);
   }
