@@ -1,4 +1,4 @@
-/* grakopp/ast.hpp - Grako++ AST header file
+/* grakopp/ast-io.hpp - Grako++ AST I/O header file
    Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
    Written by Marcus Brinkmann <m.brinkmann@semantics.de>
 

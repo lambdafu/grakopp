@@ -39,10 +39,13 @@ public:
 };
 
 class Ast;
+
 using AstPtr = std::shared_ptr<Ast>;
 AstPtr& operator<<(AstPtr& augend, const AstPtr& addend);
 
-using AstNone = std::nullptr_t;
+
+/* Just a dummy type.  */
+using AstNone = int;
 using AstString = std::string;
 
 class AstList : public std::list<AstPtr>
@@ -100,6 +103,26 @@ public:
 
   /* This is set if a cut was encountered during parsing.  */
   bool _cut;
+
+  const AstNone& the_none() const
+  {
+    return boost::get<AstNone>(_content);
+  }
+
+  AstNone& the_none()
+  {
+    return boost::get<AstNone>(_content);
+  }
+
+  const AstNone* as_none() const
+  {
+    return boost::get<AstNone>(&_content);
+  }
+
+  AstNone* as_none()
+  {
+    return boost::get<AstNone>(&_content);
+  }
 
   const AstString& the_string() const
   {
@@ -343,6 +366,48 @@ public:
     return mapped_type(*this, key);
   }
 
+  
+  class AstComparator : public boost::static_visitor<bool>
+  {
+  public:
+    const Ast& _other;
+    AstComparator(const Ast& other) : _other(other) {}
+    
+    bool operator() (const AstNone& none) const
+    {
+      return boost::get<AstNone>(&_other._content);
+    }
+    
+    bool operator() (const AstString& leaf) const
+    {
+      const AstString *ast_leaf = _other.as_string();
+      return ast_leaf && (leaf == *ast_leaf);
+    }
+    
+    bool operator() (const AstList& list) const
+    {
+      const AstList *ast_list = _other.as_list();
+      return ast_list && (list == *ast_list);
+    }
+
+    bool operator() (const AstMap& map) const
+    {
+      const AstMap *ast_map = _other.as_map();
+      return ast_map && (map == *ast_map);
+    }
+
+    bool operator() (const AstException& exc) const
+    {
+      /* Whatever.  */
+      return false;
+    }
+  };
+    
+  inline bool operator== (const Ast &ast) const
+  {
+    AstComparator comparator(ast);
+    return boost::apply_visitor(comparator, _content);
+  }
 };
 
 
@@ -351,5 +416,11 @@ AstPtr& operator<<(AstPtr& augend, const AstPtr& addend)
   augend->add(addend);
   return augend;
 }
+
+inline bool operator== (const AstPtr& ast1, const AstPtr& ast2)
+{
+  return *ast1 == *ast2;
+}
+
 
 #endif /* GRAKOPP_AST_HPP */
