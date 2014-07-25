@@ -159,7 +159,7 @@ main(int argc, char *argv[])
       MyParser::rule_method_t rule = parser.find_rule(argv[2]);
       AstPtr ast = (parser.*rule)();
       std::cout << *ast << "\n";
-      AstException *exc = boost::get<AstException>(&ast->_content);
+      AstException *exc = ast->as_exception();
       if (exc)
 	exc->_exc->_throw();
     }

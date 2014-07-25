@@ -457,7 +457,7 @@ class Grammar(Base):
                         {name}Parser::rule_method_t rule = parser.find_rule(startrule);
                         AstPtr ast = (parser.*rule)();
                         std::cout << *ast << "\\n";
-                        AstException *exc = boost::get<AstException>(&ast->_content);
+                        AstException *exc = ast->as_exception();
                         if (exc)
                             exc->_exc->_throw();
                     }}

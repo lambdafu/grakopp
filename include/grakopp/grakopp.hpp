@@ -15,6 +15,6 @@
 #include "ast.hpp"
 #include "parser.hpp"
 
-#define RETURN_IF_EXC(ast) if (boost::get<AstException>(&ast->_content)) return ast
+#define RETURN_IF_EXC(ast) if (ast->as_exception()) return ast
 
 #endif /* GRAKOPP_GRAKOPP_HPP */

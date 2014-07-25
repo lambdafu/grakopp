@@ -101,6 +101,87 @@ public:
   /* This is set if a cut was encountered during parsing.  */
   bool _cut;
 
+  const AstString& the_string() const
+  {
+    return boost::get<AstString>(_content);
+  }
+
+  AstString& the_string()
+  {
+    return boost::get<AstString>(_content);
+  }
+
+  const AstString* as_string() const
+  {
+    return boost::get<AstString>(&_content);
+  }
+
+  AstString* as_string()
+  {
+    return boost::get<AstString>(&_content);
+  }
+
+  const AstList& the_list() const
+  {
+    return boost::get<AstList>(_content);
+  }
+
+  AstList& the_list()
+  {
+    return boost::get<AstList>(_content);
+  }
+
+  const AstList* as_list() const
+  {
+    return boost::get<AstList>(&_content);
+  }
+
+  AstList* as_list()
+  {
+    return boost::get<AstList>(&_content);
+  }
+
+  const AstMap& the_map() const
+  {
+    return boost::get<AstMap>(_content);
+  }
+
+  AstMap the_map()
+  {
+    return boost::get<AstMap>(_content);
+  }
+
+  const AstMap* as_map() const
+  {
+    return boost::get<AstMap>(&_content);
+  }
+
+  AstMap* as_map()
+  {
+    return boost::get<AstMap>(&_content);
+  }
+
+  const AstException& the_exception() const
+  {
+    return boost::get<AstException>(_content);
+  }
+
+  AstException& the_exception()
+  {
+    return boost::get<AstException>(_content);
+  }
+
+  const AstException* as_exception() const
+  {
+    return boost::get<AstException>(&_content);
+  }
+
+  AstException* as_exception()
+  {
+    return boost::get<AstException>(&_content);
+  }
+
+
   /* Concrete nodes use AstNone, AstString and AstList.  Abstract nodes
      use AstMap.  */
   class AstAdder : public boost::static_visitor<void>
@@ -139,8 +220,8 @@ public:
 	if (_mergeable)
 	  {
 	    _augend._content = AstList({ augend });
-	    AstList& list = boost::get<AstList>(_augend._content);
-	    AstList& rlist = boost::get<AstList>(_addend->_content);
+	    AstList& list = _augend.the_list();
+	    AstList& rlist = _addend->the_list();
 	    list.insert(list.end(), rlist.begin(), rlist.end());
 	  }
 	else
@@ -151,7 +232,7 @@ public:
       {
 	if (_mergeable)
 	  {
-	    AstList& rlist = boost::get<AstList>(_addend->_content);
+	    AstList& rlist = _addend->the_list();
 	    list.insert(list.end(), rlist.begin(), rlist.end());
 	  }
 	else
@@ -230,19 +311,19 @@ public:
     std::string _key;
     mapped_type& operator<<(const AstPtr& value)
     {
-      AstException *exc = boost::get<AstException>(&value->_content);
+      AstException *exc = value->as_exception();
       if (exc)
 	_ast._content = *exc;
       else
 	{
-	  AstMap* map = boost::get<AstMap>(&_ast._content);
+	  AstMap* map = _ast.as_map();
 
 	  if (!map)
 	    {
 	      /* Coerce left side to a map.  This covers nested named items, such as
 		 "rule = ( name: value );".  */
 	      _ast._content = AstMap();
-	      map = boost::get<AstMap>(&_ast._content);
+	      map = _ast.as_map();
 	    }
 
 	  /* Also in the nested name case, the key may not already exist.  */

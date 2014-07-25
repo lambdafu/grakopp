@@ -115,7 +115,7 @@ public:
     //  node._add('_parseinfo', ParseInfo(self._buffer, name, pos, self._pos))
 
     /* Maybe override the AST.  */
-    AstMap *map = boost::get<AstMap>(&ast->_content);
+    AstMap *map = ast->as_map();
     if (map)
       {
 	auto el = map->find("@");
@@ -131,7 +131,7 @@ public:
     memo_value_t value (ast, next_pos, next_state);
     _memoization_cache[key] = value;
 
-    AstException *exc = boost::get<AstException>(&ast->_content);
+    AstException *exc = ast->as_exception();
     if (exc)
       _buffer->_pos = pos;
     else
@@ -214,7 +214,7 @@ public:
     size_t pos = _buffer->_pos;
     state_t state = _state;
     AstPtr ast = func();
-    if (boost::get<AstException>(&ast->_content))
+    if (ast->as_exception())
       {
 	_state = state;
 	_buffer->_pos = pos;
@@ -226,7 +226,7 @@ public:
   {
     /* Sets success to true if succeeds (otherwise does not touch it).  */
     AstPtr ast = _try(func);
-    if (boost::get<AstException>(&ast->_content) && !ast->_cut)
+    if (ast->as_exception() && !ast->_cut)
       {
 	/* Non-cut exceptions are ignored, but don't report success
 	   (normal failed option).  */
@@ -267,7 +267,7 @@ public:
   {
     AstPtr ast = func();
     /* If a list is returned, make it mergable.  */
-    AstList *list = boost::get<AstList>(&ast->_content);
+    AstList *list = ast->as_list();
     if (list)
       list->_mergeable = true;
     return ast;
@@ -286,7 +286,7 @@ public:
     _buffer->_pos = pos;
 
     /* Only pass through failures.  */
-    if (boost::get<AstException>(&ast->_content))
+    if (ast->as_exception())
       return ast;
     else
       return std::make_shared<Ast>();
@@ -296,7 +296,7 @@ public:
   {
     AstPtr ast = _if(func);
     /* Invert result.  */
-    if (boost::get<AstException>(&ast->_content))
+    if (ast->as_exception())
       return std::make_shared<Ast>();
     else
       /* If we had a invert() function on every exception, this could
@@ -314,10 +314,10 @@ public:
 	AstPtr ast = _try(func);
 
 	/* Only if no exception! */
-	if (!boost::get<AstException>(&ast->_content) && (pos == _buffer->_pos))
+	if (!ast->as_exception() && (pos == _buffer->_pos))
 	  return _error<FailedParse>("empty closure");
 
-	if (boost::get<AstException>(&ast->_content))
+	if (ast->as_exception())
 	  {
 	    if (ast->_cut)
 	      /* Exceptions after cut are fatal.  */
@@ -337,12 +337,12 @@ public:
   {
     AstPtr ast = std::make_shared<Ast>(AstList());
     ast << func();
-    if (boost::get<AstException>(&ast->_content))
+    if (ast->as_exception())
       return ast;
 
     /* We need to merge the closure.  */
     AstPtr opt_ast = _closure(func);
-    AstList *list = boost::get<AstList>(&opt_ast->_content);
+    AstList *list = opt_ast->as_list();
     if (list)
       list->_mergeable = true;
 
