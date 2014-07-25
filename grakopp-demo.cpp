@@ -145,12 +145,16 @@ public:
 };
 
 
+#ifdef GRAKOPP_MAIN
+#include <grakopp/ast-io.hpp>
+
 int
 main(int argc, char *argv[])
 {
   BufferPtr buf = std::make_shared<Buffer>();
   MyParser parser;
 
+  parser.set_whitespace("");
   buf->from_file(argv[1]);
   parser.set_buffer(buf);
 
@@ -170,3 +174,4 @@ main(int argc, char *argv[])
 
   return 0;
 }
+#endif /* GRAKOPP_MAIN */

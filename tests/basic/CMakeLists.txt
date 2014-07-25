@@ -2,6 +2,7 @@ set(PEG_FILES basic.peg)
 peg_files("" False ${PEG_FILES})
 
 add_executable(basic basic.cpp)
+target_compile_options(basic PRIVATE -DGRAKOPP_MAIN)
 target_include_directories(basic PRIVATE libgrakopp)
 target_link_libraries(basic libgrakopp)
 

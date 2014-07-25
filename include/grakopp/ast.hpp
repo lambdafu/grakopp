@@ -345,96 +345,11 @@ public:
 
 };
 
+
 AstPtr& operator<<(AstPtr& augend, const AstPtr& addend)
 {
   augend->add(addend);
   return augend;
-}
-
-
-
-std::ostream& operator<< (std::ostream& cout, const Ast& ast)
-{
-  class AstDumper : public boost::static_visitor<void>
-  {
-    void xml_escape(std::string* data) const
-    {
-      using boost::algorithm::replace_all;
-      replace_all(*data, "&",  "&amp;");
-      replace_all(*data, "\"", "&quot;");
-      replace_all(*data, "\'", "&apos;");
-      replace_all(*data, "<",  "&lt;");
-      replace_all(*data, ">",  "&gt;");
-    }
-
-    void json_escape(std::string* data) const
-    {
-      using boost::algorithm::replace_all;
-      replace_all(*data, "\\", "\\\\");
-      replace_all(*data, "\"",  "\\\"");
-      replace_all(*data, "\b",  "\\\b");
-      replace_all(*data, "\f",  "\\\f");
-      replace_all(*data, "\n",  "\\\n");
-      replace_all(*data, "\t",  "\\\t");
-      /* FIXME: Replace all < 32 */
-    }
-
-  public:
-    AstDumper(std::ostream& cout) : _cout(cout) {}
-    std::ostream& _cout;
-
-    void operator() (const AstNone& none) const
-    {
-      _cout << "null";
-    }
-
-    void operator() (const AstString& leaf) const
-    {
-      std::string _leaf = leaf;
-      json_escape(&_leaf);
-      _cout << "\"" << _leaf << "\"";
-    }
-
-    void operator() (const AstList& list) const
-    {
-      bool first = true;
-      _cout << "[\n";
-      for (auto& child: list)
-	{
-	  if (first)
-	    first = false;
-	  else
-	    _cout << ", \n";
-	  _cout << "  " << *child;
-	}
-      _cout << "]\n";
-    }
-
-    void operator() (const AstMap& map) const
-    {
-      bool first = true;
-      _cout << "{\n";
-      for (auto& key: map._order)
-	{
-	  if (first)
-	    first = false;
-	  else
-	      _cout << ", \n";
-	  _cout << "  \"" << key << "\" : " << *map.at(key);
-	}
-      _cout << "}\n";
-    }
-
-    void operator() (const AstException& exc) const
-    {
-      _cout << *exc;
-    }
-
-  };
-
-  AstDumper dumper(cout);
-  boost::apply_visitor(dumper, ast._content);
-  return cout;
 }
 
 #endif /* GRAKOPP_AST_HPP */

@@ -66,6 +66,7 @@ EndFunction(peg_files)
 
 # Small test program.
 add_executable(grakopp-demo grakopp-demo.cpp)
+target_compile_options(grakopp-demo PRIVATE -DGRAKOPP_MAIN)
 target_include_directories(grakopp-demo PRIVATE libgrakopp)
 target_link_libraries(grakopp-demo libgrakopp)
 

@@ -442,6 +442,9 @@ class Grammar(Base):
                 {abstract_rules}
                 }};
 
+                #ifdef GRAKOPP_MAIN
+                #include <grakopp/ast-io.hpp>
+
                 int
                 main(int argc, char *argv[])
                 {{
@@ -468,4 +471,5 @@ class Grammar(Base):
 
                     return 0;
                 }}
+                #endif /* GRAKOPP_MAIN */
                '''
