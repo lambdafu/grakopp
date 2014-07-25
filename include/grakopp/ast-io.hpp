@@ -150,4 +150,142 @@ std::ostream& operator<< (std::ostream& cout, const Ast& ast)
 }
 
 
+/* Forward declaration.  */
+std::istream& operator>> (std::istream& is, AstPtr& val);
+
+std::istream& operator>> (std::istream& is, AstString& val)
+{
+  char ch;
+
+  if (is.peek() != '"')
+    throw std::invalid_argument("quote expected");
+  is >> ch;
+
+  while (! is.eof())
+    {
+      is >> ch;
+
+      if (ch == '"')
+	return is;
+      else if (ch == '\\')
+	{
+	  is >> ch;
+	  if (ch == 'b')
+	    val += '\b';
+	  else if (ch == 'f')
+	    val += '\f';
+	  else if (ch == 'n')
+	    val += '\n';
+	  else if (ch == 'r')
+	    val += '\r';
+	  else if (ch == 't')
+	    val += '\t';
+	  else if (ch == 'u')
+	    throw std::invalid_argument("unicode support not implemented yet");
+	  else
+	    val += ch;
+	}
+      else
+	val += ch;
+    }
+  throw std::invalid_argument("EOF in string");
+}
+
+std::istream& operator>> (std::istream& is, AstList& val)
+{
+  char ch;
+
+  if (is.peek() != '[')
+    throw std::invalid_argument("list expected");
+  is >> ch >> std::ws;
+
+  while (! is.eof() )
+    {
+      if (is.peek() == ']')
+	{
+	  is >> ch;
+	  return is;
+	}
+
+      AstPtr ast = std::make_shared<Ast>();
+      is >> ast >> std::ws;
+      val.push_back(ast);
+
+      ch = is.peek();
+      if (ch == ',')
+	is >> ch >> std::ws;
+      if (ch != ',' && ch != ']')
+	throw std::invalid_argument("expected comma");
+    }
+  throw std::invalid_argument("EOF in list");
+}
+
+std::istream& operator>> (std::istream& is, AstMap& val)
+{
+  char ch;
+
+  if (is.peek() != '{')
+    throw std::invalid_argument("map expected");
+  is >> ch >> std::ws;
+
+  while (! is.eof())
+    {
+      if (is.peek() == '}')
+	{
+	  is >> ch;
+	  return is;
+	}
+
+      AstString key;
+      is >> key >> std::ws;
+
+      if (is.peek() != ':')
+	throw std::invalid_argument("expected colon");
+      is >> ch >> std::ws;
+
+      AstPtr ast = std::make_shared<Ast>();
+      is >> ast >> std::ws;
+
+      /* FIXME: Maybe override in AstMap.  */
+      val._order.push_back(key);
+      val[key] = ast;
+
+      ch = is.peek();
+      if (ch == ',')
+	is >> ch >> std::ws;
+      if (ch != ',' && ch != '}')
+	throw std::invalid_argument("expected comma");
+    }
+  throw std::invalid_argument("EOF in list");
+}
+
+std::istream& operator>> (std::istream& is, AstPtr& val)
+{
+  char ch = is.peek();
+
+  if (ch == '"')
+    {
+      AstString str;
+      is >> str;
+      val->_content = str;
+    }
+  else if (ch == '[')
+    {
+      AstList list;
+      is >> list;
+      val->_content = list;
+    }
+  else if (ch == '{')
+    {
+      AstMap map;
+      is >> map;
+      val->_content = map;
+    }
+  else
+    throw std::invalid_argument("AST expected");
+
+  return is;
+}
+    
+
 #endif /* _GRAKOPP_AST_IO_HPP */

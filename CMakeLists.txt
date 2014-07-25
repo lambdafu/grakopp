@@ -71,4 +71,5 @@ target_include_directories(grakopp-demo PRIVATE libgrakopp)
 target_link_libraries(grakopp-demo libgrakopp)
 
 enable_testing()
+add_subdirectory(tools)
 add_subdirectory(tests)
