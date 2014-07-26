@@ -12,9 +12,10 @@
 
 #include <string>
 #include <iostream>
+#include <boost/algorithm/string/replace.hpp>
 
 
-class GrakoException : std::exception
+class GrakoException : public std::exception
 {
 };
 
@@ -28,63 +29,133 @@ class FailedParseBase : public ParseError
 {
 public:
   FailedParseBase() {}
-  virtual std::ostream& output(std::ostream& cout) const = 0;
+  virtual const char* type() const = 0;
+  virtual const char* initializer() const = 0;
   virtual void _throw() = 0;
+
+  bool operator== (const FailedParseBase& exc) const
+  {
+    return !strcmp(type(), exc.type()) && !strcmp(what(), exc.what());
+  }
 };
 
+
+/* Serialization format.  */
 std::ostream& operator<< (std::ostream& cout, const FailedParseBase& exc)
 {
-  return exc.output(cout);
+  return cout << exc.what();
 }
 
 
 class FailedParse : public FailedParseBase
 {
+  const std::string _msg;
+
 public:
   FailedParse(const std::string& msg) : FailedParseBase(), _msg(msg) {}
-  const std::string _msg;
-  std::ostream& output(std::ostream& cout) const
+
+  const char *what() const throw()
   {
-    return cout << _msg;
+    return _msg.data();
   }
+
+  const char *type() const
+  {
+    return "FailedParse";
+  }
+
+  const char *initializer() const
+  {
+    return _msg.data();
+  }
+
   void _throw() { throw *this; }
 };
 
 
 class FailedToken : public FailedParseBase
 {
-public:
-  FailedToken(const std::string& token) : FailedParseBase(), _token(token) {}
   const std::string _token;
-  std::ostream& output(std::ostream& cout) const
+  const std::string _msg;
+
+public:
+  FailedToken(const std::string& token)
+    : FailedParseBase(), _token(token),
+      _msg("expecting \"" + _token + "\"")
   {
-    return cout << "expecting \"" << _token << "\"";
   }
+
+  const char* what() const throw()
+  {
+    return _msg.data();
+  }
+
+  const char* type() const
+  {
+    return "FailedToken";
+  }
+
+  const char* initializer() const
+  {
+    return _token.data();
+  }
+
   void _throw() { throw *this; }
 };
 
 
 class FailedPattern : public FailedParseBase
 {
-public:
-  FailedPattern(const std::string& pattern) : FailedParseBase(), _pattern(pattern) {}
   const std::string _pattern;
-  std::ostream& output(std::ostream& cout) const
+  const std::string _msg;
+
+public:
+  FailedPattern(const std::string& pattern)
+    : FailedParseBase(), _pattern(pattern),
+      _msg("expecting \"" + _pattern = "\"")
   {
-    return cout << "expecting \"" << _pattern << "\"";
   }
+
+  const char* what() const throw()
+  {
+    return _msg.data();
+  }
+
+  const char* type() const
+  {
+    return "FailedPattern";
+  }
+
+  const char* initializer() const
+  {
+    return _pattern.data();
+  }
+
   void _throw() { throw *this; }
 };
 
 
 class FailedLookahead : public FailedParseBase
 {
+  const std::string& _msg;
 public:
-  FailedLookahead(const std::string& msg) : FailedParseBase() {}
-  std::ostream& output(std::ostream& cout) const
+  FailedLookahead(const std::string& msg) : FailedParseBase(), _msg(msg) {}
+
+  const char* what() const throw()
   {
-    return cout << "failed lookahead";
+    return "failed lookahead";
   }
+
+  const char* type() const
+  {
+    return "FailedLookahead";
+  }
+
+  const char* initializer() const
+  {
+    return _msg.data();
+  }
+
   void _throw() { throw *this; }
 };
 

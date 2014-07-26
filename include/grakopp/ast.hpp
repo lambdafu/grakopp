@@ -17,7 +17,6 @@
 #include <memory>
 
 #include <boost/variant.hpp>
-#include <boost/algorithm/string/replace.hpp>
 
 #include <assert.h>
 
@@ -28,13 +27,20 @@
 class AstException
 {
 public:
+  std::shared_ptr<FailedParseBase> _exc;
+
+  AstException() {}
   AstException(std::shared_ptr<FailedParseBase> exc)
     : _exc(exc)
   {}
-  std::shared_ptr<FailedParseBase> _exc;
   const FailedParseBase& operator*() const
   {
     return *_exc;
+  }
+
+  bool operator==(const AstException& exc) const
+  {
+    return *_exc == *exc._exc;
   }
 };
 
@@ -45,7 +51,8 @@ AstPtr& operator<<(AstPtr& augend, const AstPtr& addend);
 
 
 /* Just a dummy type.  */
-using AstNone = int;
+class AstNone {};
+
 using AstString = std::string;
 
 class AstList : public std::list<AstPtr>
@@ -396,10 +403,10 @@ public:
       return ast_map && (map == *ast_map);
     }
 
-    bool operator() (const AstException& exc) const
+    bool operator() (const AstException& exception) const
     {
-      /* Whatever.  */
-      return false;
+      const AstException *ast_exception = _other.as_exception();
+      return ast_exception && (exception == *ast_exception);
     }
   };
     

@@ -70,7 +70,7 @@ public:
     _text = text;
   }
 
-  void from_file(const char *filename)
+  void from_file(const std::string& filename)
   {
     std::ifstream in(filename, std::ios::in | std::ios::binary);
     if (in)

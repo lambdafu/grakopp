@@ -12,6 +12,7 @@
 
 #include <ostream>
 #include <streambuf>
+#include <boost/algorithm/string/replace.hpp>
 
 #include "ast.hpp"
 
@@ -102,44 +103,56 @@ std::ostream& operator<< (std::ostream& cout, const Ast& ast)
     void operator() (const AstList& list) const
     {
       bool first = true;
-      _cout << "[\n";
+      _cout << "[";
       {
 	AstIndentGuard ind_cout(_cout);
 	
 	for (auto& child: list)
 	  {
 	    if (first)
-	      first = false;
+	      {
+		first = false;
+		_cout << "\n";
+	      }
 	    else
-	      _cout << ", \n";
+	      _cout << ",\n";
 	    _cout << *child;
 	  }
       }
-      _cout << "\n]";
+      if (!first)
+	_cout << "\n";
+      _cout << "]";
     }
 
     void operator() (const AstMap& map) const
     {
       bool first = true;
-      _cout << "{\n";
+      _cout << "{";
       {
 	AstIndentGuard ind_out(_cout);
 
 	for (auto& key: map._order)
 	  {
 	    if (first)
-	      first = false;
+	      {
+		first = false;
+		_cout << "\n";
+	      }
 	    else
-	      _cout << ", \n";
+	      _cout << ",\n";
 	    _cout << "\"" << key << "\" : " << *map.at(key);
 	  }
       }
-      _cout << "\n}";
+      if (!first)
+	_cout << "\n";
+      _cout << "}";
     }
 
     void operator() (const AstException& exc) const
     {
-      _cout << *exc;
+      std::string msg = (*exc).what();
+      json_escape(&msg);
+      _cout << (*exc).type() << "(\"" << msg << "\")";
     }
 
   };
@@ -152,6 +165,28 @@ std::ostream& operator<< (std::ostream& cout, const Ast& ast)
 
 /* Forward declaration.  */
 std::istream& operator>> (std::istream& is, AstPtr& val);
+
+std::istream& operator>> (std::istream& is, AstNone& val)
+{
+  char ch;
+  is >> ch;
+  if (ch != 'n')
+    throw std::invalid_argument("null expected");
+
+  is >> ch;
+  if (ch != 'u')
+    throw std::invalid_argument("null expected");
+
+  is >> ch;
+  if (ch != 'l')
+    throw std::invalid_argument("null expected");
+
+  is >> ch;
+  if (ch != 'l')
+    throw std::invalid_argument("null expected");
+
+  return is;
+}
 
 std::istream& operator>> (std::istream& is, AstString& val)
 {
@@ -259,6 +294,38 @@ std::istream& operator>> (std::istream& is, AstMap& val)
   throw std::invalid_argument("EOF in list");
 }
 
+std::istream& operator>> (std::istream& is, AstException& exc)
+{
+#define MAX_TOKEN 40
+  char token[MAX_TOKEN];
+  is.getline(token, MAX_TOKEN, '(');
+  /* Paranoia.  */
+  token[MAX_TOKEN - 1] = '\0';
+  /* FIXME: Report better error on invalid input, in particular if
+     opening parenthesis is missing.  */
+
+  AstString msg;
+  is >> msg;
+
+  if (is.peek() != ')')
+    throw std::invalid_argument("closing parenthesis expected");
+  is.ignore(1);
+
+  if (!strcmp(token, "FailedParse"))
+    exc._exc = std::make_shared<FailedParse>(msg);
+  else if (!strcmp(token, "FailedToken"))
+    exc._exc = std::make_shared<FailedToken>(msg);
+  else if (!strcmp(token, "FailedPattern"))
+    exc._exc = std::make_shared<FailedPattern>(msg);
+  else if (!strcmp(token, "FailedLookahead"))
+    exc._exc = std::make_shared<FailedLookahead>(msg);
+  else
+    throw std::invalid_argument("unknown exception");
+
+  return is;
+}
+
+
 std::istream& operator>> (std::istream& is, AstPtr& val)
 {
   char ch = is.peek();
@@ -281,6 +348,19 @@ std::istream& operator>> (std::istream& is, AstPtr& val)
       is >> map;
       val->_content = map;
     }
+  else if (ch == 'F')
+    {
+      AstException exc;
+      is >> exc;
+      val->_content = exc;
+    }
+  else if (ch == 'n')
+    {
+      AstNone none;
+      is >> none;
+      val->_content = none;
+    }
+
   else
     throw std::invalid_argument("AST expected");
 
