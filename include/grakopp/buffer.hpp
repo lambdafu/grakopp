@@ -16,6 +16,7 @@
 #include <fstream>
 #include <sstream>
 #include <cerrno>
+#include <unordered_map>
 
 #include <boost/optional.hpp>
 
@@ -34,10 +35,12 @@ namespace std
     using boost::regex_constants::match_flag_type;
     using boost::regex_constants::match_continuous;
     using boost::regex_constants::match_prev_avail;
+    using boost::regex_constants::match_not_dot_newline;
   }
   using boost::smatch;
   using boost::regex_search;
 }
+#define BOOST_REGEX
 #endif
 
 
@@ -232,12 +235,26 @@ public:
   boost::optional<std::string> matchre(std::string pattern)
   {
     boost::optional<std::string> maybe_token;
-    std::regex re(pattern);
+
+    /* FIXME: Not thread-safe.  */
+    static std::unordered_map<std::string, std::regex *>_lookup;
+    std::regex *rep;
+    if (_lookup.count(pattern) == 0)
+      {
+	rep = new std::regex(pattern);
+	_lookup[pattern] = rep;
+      }
+    else
+      rep = _lookup[pattern];
+    std::regex& re = *rep;
 
     /* Multiline is the default.  */
     std::regex_constants::match_flag_type flags = std::regex_constants::match_continuous;
     if (_pos > 0)
       flags |= std::regex_constants::match_prev_avail;
+#ifdef BOOST_REGEX
+    flags |= std::regex_constants::match_not_dot_newline;
+#endif
 
     std::smatch match;
     int cnt = std::regex_search(_text.cbegin() + _pos, _text.cend(), match, re, flags);

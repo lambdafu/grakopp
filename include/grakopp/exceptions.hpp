@@ -112,7 +112,7 @@ class FailedPattern : public FailedParseBase
 public:
   FailedPattern(const std::string& pattern)
     : FailedParseBase(), _pattern(pattern),
-      _msg("expecting \"" + _pattern = "\"")
+      _msg("expecting \"" + _pattern + "\"")
   {
   }
 
