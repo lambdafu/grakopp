@@ -62,25 +62,15 @@ std::ostream& operator<< (std::ostream& cout, const Ast& ast)
 {
   class AstDumper : public boost::static_visitor<void>
   {
-    void xml_escape(std::string* data) const
-    {
-      using boost::algorithm::replace_all;
-      replace_all(*data, "&",  "&amp;");
-      replace_all(*data, "\"", "&quot;");
-      replace_all(*data, "\'", "&apos;");
-      replace_all(*data, "<",  "&lt;");
-      replace_all(*data, ">",  "&gt;");
-    }
-    
     void json_escape(std::string* data) const
     {
       using boost::algorithm::replace_all;
       replace_all(*data, "\\", "\\\\");
-      replace_all(*data, "\"",  "\\\"");
-      replace_all(*data, "\b",  "\\\b");
-      replace_all(*data, "\f",  "\\\f");
-      replace_all(*data, "\n",  "\\\n");
-      replace_all(*data, "\t",  "\\\t");
+      replace_all(*data, "\"", "\\\"");
+      replace_all(*data, "\b", "\\b");
+      replace_all(*data, "\f", "\\f");
+      replace_all(*data, "\n", "\\n");
+      replace_all(*data, "\t", "\\t");
       /* FIXME: Replace all < 32 */
     }
     
