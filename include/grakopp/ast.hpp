@@ -92,7 +92,6 @@ public:
 	  (*this)[key] = std::make_shared<Ast>();
       }
   }
-
 };
 
 
@@ -424,9 +423,14 @@ AstPtr& operator<<(AstPtr& augend, const AstPtr& addend)
   return augend;
 }
 
-inline bool operator== (const AstPtr& ast1, const AstPtr& ast2)
+bool operator== (const AstPtr& ast1, const AstPtr& ast2)
 {
   return *ast1 == *ast2;
+}
+
+bool operator!= (const AstPtr& ast1, const AstPtr& ast2)
+{
+  return !(*ast1 == *ast2);
 }
 
 

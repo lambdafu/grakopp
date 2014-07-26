@@ -350,7 +350,6 @@ std::istream& operator>> (std::istream& is, AstPtr& val)
       is >> none;
       val->_content = none;
     }
-
   else
     throw std::invalid_argument("AST expected");
 
