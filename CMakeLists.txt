@@ -64,6 +64,14 @@ Function(peg_files whitespace nameguard)
   EndForeach(_pegFile)
 EndFunction(peg_files)
 
+Function(peg_test)
+  Foreach(basename ${ARGN})
+    String(REGEX REPLACE "-.*$" "" testname "${basename}")
+    String(REGEX REPLACE "^.*-" "" startrule "${basename}")
+    add_test(${basename} ./${testname} --test ${CMAKE_CURRENT_SOURCE_DIR}/${basename}.out ${CMAKE_CURRENT_SOURCE_DIR}/${basename}.in ${startrule})
+  EndForeach(basename)
+EndFunction(peg_test)
+
 # Small test program.
 add_executable(grakopp-demo grakopp-demo.cpp)
 target_compile_options(grakopp-demo PRIVATE -DGRAKOPP_MAIN)

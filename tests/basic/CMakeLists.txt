@@ -6,6 +6,16 @@ target_compile_options(basic PRIVATE -DGRAKOPP_MAIN)
 target_include_directories(basic PRIVATE libgrakopp)
 target_link_libraries(basic libgrakopp)
 
-# FIXME: Add --test option to generated main functions that does comparison.
-add_test(basic001 basic ${CMAKE_CURRENT_SOURCE_DIR}/basic-001-disjunction.in disjunction)
-add_test(basic002 basic ${CMAKE_CURRENT_SOURCE_DIR}/basic-002-sequence.in sequence)
+peg_test(
+  basic-001-disjunction 
+  basic-002-sequence
+  basic-003-group
+  basic-004-optional
+  basic-005-optional
+  basic-006-closure
+  basic-007-closure
+  basic-008-closure
+  basic-009-positive_closure
+  basic-010-positive_closure
+  basic-011-positive_closure
+  )

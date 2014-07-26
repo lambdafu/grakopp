@@ -37,17 +37,17 @@ Other useful option: -DCMAKE_INSTALL_PREFIX:PATH=/path/to/install
 TODO
 ----
 
-* left recursion
-* stateful parsing
 * tests
-* python integration (a la pyximport)
+* stateful parsing
 * regex syntax details
-* XML output
-
+* ignorecase (buffer match, matchre)
+* unicode
+* python integration (a la pyximport)
+* left recursion
 
 Authors
 -------
 
-Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
-Written by Marcus Brinkmann <m.brinkmann@semantics.de>
-See LICENSE.txt for details.
+ Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
+ Written by Marcus Brinkmann <m.brinkmann@semantics.de>
+ See LICENSE.txt for details.

@@ -448,28 +448,59 @@ class Grammar(Base):
                 int
                 main(int argc, char *argv[])
                 {{
+                    int result = 0;
+                    std::list<std::string> args(argv + 1, argv + argc);
+                    bool validate = false;
+                    std::string validate_file;
+
+                    if (args.front() == "--test")
+                    {{
+                        args.pop_front();
+                        validate = true;
+                        validate_file = args.front();
+                        args.pop_front();
+                    }}
+
                     BufferPtr buf = std::make_shared<Buffer>();
                     {name}Parser parser;
 
-                    buf->from_file(argv[1]);
+                    buf->from_file(args.front());
+                    args.pop_front();
                     parser.set_buffer(buf);
 
                     try
                     {{
-                        std::string startrule(argv[2]);
+                        std::string startrule(args.front());
+                        args.pop_front();
                         {name}Parser::rule_method_t rule = parser.find_rule(startrule);
                         AstPtr ast = (parser.*rule)();
                         std::cout << *ast << "\\n";
                         AstException *exc = ast->as_exception();
                         if (exc)
                             exc->_exc->_throw();
+
+                        if (validate)
+                        {{
+                            std::ifstream file;
+                            file.open(validate_file);
+                            AstPtr validate_ast = std::make_shared<Ast>();
+                            file >> std::noskipws >> std::ws >> validate_ast;
+                            if (ast != validate_ast)
+                                result = 1;
+                        }}
+
                     }}
                     catch(FailedParseBase& exc)
                     {{
-                        std::cout << "Error: " << exc << "\\n";
+                        std::cerr << "ERROR: " << exc << "\\n";
+                    }}
+                    catch (const std::invalid_argument& exc)
+                    {{
+                        std::cerr << "ERROR: parsing test file: " << exc.what() << "\\n";
+                        result = 2;
                     }}
 
-                    return 0;
+                    return result;
                 }}
                 #endif /* GRAKOPP_MAIN */
                '''
