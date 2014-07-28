@@ -1,12 +1,11 @@
 #include <grakopp/grakopp.hpp>
 
 /* This stuff is generated.  */
-class MyParser : public Parser
+class MyParser : public Parser<>
 {
 public:
 
   MyParser()
-    : Parser()
   {
   }
 

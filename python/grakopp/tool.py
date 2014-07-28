@@ -67,6 +67,11 @@ argparser.add_argument('-w', '--whitespace',
                        help='characters to skip during parsing (use "" to disable)',
                        default=None
                        )
+argparser.add_argument('-s', '--statetype',
+                       metavar='TYPENAME',
+                       help='class name of the parser state (for stateful parsing)',
+                       default=None
+                       )
 
 
 def genmodel(name, grammar, trace=False, filename=None):
@@ -96,6 +101,7 @@ def main():
     outfile = args.output
     trace = args.trace
     whitespace = args.whitespace
+    statetype = args.statetype
 
     if whitespace:
         whitespace = eval_escapes(args.whitespace)
@@ -117,6 +123,7 @@ def main():
         model = genmodel(name, grammar, trace=trace, filename=filename)
         model.whitespace = whitespace
         model.nameguard = nameguard
+        model.statetype = statetype
 
         result = codegen(model)
 

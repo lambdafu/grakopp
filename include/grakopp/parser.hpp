@@ -19,32 +19,33 @@
 #include "ast.hpp"
 
 
-/* FIXME: For now.  */
-typedef int state_t;
-
 /* OPTIMIZATION: Somehow use templating to make grammar rules with
    lambda better inline-optimizable (sim. to C++ map).  */
+/* OPTIMIZATION: Specialise for void State.  */
 
+template <typename _State=int>
 class Parser
 {
 public:
+  using State = _State;
+
   Parser()
     : _whitespace(" \t\r\n\x0b\x0c"),
       _nameguard_set(false), _nameguard(true),
-      _state(0) { }
+      _state()
+      { }
 
   BufferPtr _buffer;
   std::string _whitespace;
   bool _nameguard_set;
   bool _nameguard;
-  
-  state_t _state;
+  State _state;
 
   /* We sort by position first, because we can then optimize the cut
      operator.  However, if you use an unordered map here, remember to
      iterate over all items in the cut operator.  */
-  using memo_key_t = std::tuple<size_t, std::string, state_t>;
-  using memo_value_t = std::tuple<AstPtr, size_t, state_t>;
+  using memo_key_t = std::tuple<size_t, std::string, State>;
+  using memo_value_t = std::tuple<AstPtr, size_t, State>;
   std::map<memo_key_t, memo_value_t> _memoization_cache;
 
   void _update_buffer()
@@ -89,7 +90,7 @@ public:
   AstPtr _call(std::string name, std::function<AstPtr ()> func)
   {
     size_t pos = _buffer->_pos;
-    state_t& state = _state;
+    State& state = _state;
     memo_key_t key(pos, name, state);
 
     {
@@ -125,7 +126,7 @@ public:
 
     size_t next_pos = _buffer->_pos;
     /* FIXME: Apply semantics.  */
-    state_t& next_state = state;
+    State& next_state = state;
 
     /* Fill memoization cache.  FIXME: Check "don't memo lookaheads" flag). */
     memo_value_t value (ast, next_pos, next_state);
@@ -175,7 +176,7 @@ public:
     size_t cutpos = _buffer->_pos;
     /* This is a bit cheesy, but it'll work.  We need a string larger
        than all valid strings (and state doesn't matter then).  */
-    memo_key_t last_key(cutpos, "\xff", state_t());
+    memo_key_t last_key(cutpos, "\xff", State());
     auto upper = _memoization_cache.upper_bound(last_key);
     // std::cout << "Dropping " << std::distance(_memoization_cache.begin(),upper) << "\n";
     _memoization_cache.erase(_memoization_cache.begin(), upper);
@@ -212,7 +213,7 @@ public:
   AstPtr _try(std::function<AstPtr ()> func)
   {
     size_t pos = _buffer->_pos;
-    state_t state = _state;
+    State state = _state;
     AstPtr ast = func();
     if (ast->as_exception())
       {
@@ -276,7 +277,7 @@ public:
   AstPtr _if(std::function<AstPtr ()> func)
   {
     size_t pos = _buffer->_pos;
-    state_t state = _state;
+    State state = _state;
     // _enter_lookahead
 
     AstPtr ast = func();
