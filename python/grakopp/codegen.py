@@ -15,8 +15,6 @@ from __future__ import (absolute_import, division, print_function,
 C++ code generation for models defined with grako.model
 """
 
-import keyword
-
 from grako.util import indent, trim, timestamp, ustr, urepr, compress_seq
 from grako.exceptions import CodegenError
 from grako.model import Node
@@ -35,12 +33,6 @@ class CppCodeGenerator(CodeGenerator):
         if not renderer or not issubclass(renderer, Base):
             raise CodegenError('Renderer for %s not found' % name)
         return renderer
-
-
-def safe_name(name):
-    if keyword.iskeyword(name):
-        return name + '_'
-    return name
 
 
 def codegen(model):
@@ -230,7 +222,7 @@ class Named(_Decorator):
 
     def render_fields(self, fields):
         fields.update(n=self.counter(),
-                      name=safe_name(self.node.name)
+                      name=self.node.name
                       )
 
     template = '''
@@ -330,7 +322,7 @@ class Rule(_Decorator):
                 AstPtr _{name}_()
                 {{
                     AstPtr ast = std::make_shared<Ast>();
-                    ast << _call("{name}", [this] () {{
+                    ast << _call("{name}", &Semantics::_{name}_, [this] () {{
                 {defines:2::}
                 {exp:2::}
                         return ast;
@@ -353,7 +345,7 @@ class Grammar(Base):
     def render_fields(self, fields):
         abstract_template = trim(self.abstract_rule_template)
         abstract_rules = [
-            abstract_template.format(parsername=fields['name'], name=safe_name(rule.name))
+            abstract_template.format(parsername=fields['name'], name=rule.name)
             for rule in self.node.rules
         ]
         abstract_rules = indent('\n'.join(abstract_rules))
@@ -370,9 +362,9 @@ class Grammar(Base):
             nameguard = ""
 
         if self.node.statetype is not None:
-            statetype = self.node.statetype
+            statetype_arg = ", " + self.node.statetype
         else:
-            statetype = ""
+            statetype_arg = ""
 
         rules = '\n'.join([
             self.get_renderer(rule).render() for rule in self.node.rules
@@ -390,7 +382,7 @@ class Grammar(Base):
                       abstract_rules=abstract_rules,
                       version=version,
                       whitespace=whitespace,
-                      statetype=statetype,
+                      statetype_arg=statetype_arg,
                       nameguard=nameguard
                       )
 
@@ -398,6 +390,7 @@ class Grammar(Base):
     abstract_rule_template = '''
             virtual AstPtr _{name}_ (AstPtr& ast)
             {{
+                std::cout << "{name}" << "\\n";
                 return ast;
             }}
             '''
@@ -412,7 +405,7 @@ class Grammar(Base):
                    Any changes you make to it will be overwritten the next time
                    the file is generated.
                 */
-
+                #include <iostream>
                 #include <grakopp/grakopp.hpp>
 
                 // version__ = {version}
@@ -423,7 +416,7 @@ class Grammar(Base):
                 {abstract_rules}
                 }};
 
-                class {name}Parser : public Parser<{statetype}>
+                class {name}Parser : public Parser<{name}Semantics{statetype_arg}>
                 {{
                 public:
                     {name}Parser()

@@ -23,16 +23,22 @@
    lambda better inline-optimizable (sim. to C++ map).  */
 /* OPTIMIZATION: Specialise for void State.  */
 
-template <typename _State=int>
+class NoSemantics
+{
+};
+
+template <typename _Semantics=NoSemantics, typename _State=int>
 class Parser
 {
 public:
   using State = _State;
+  using Semantics = _Semantics;
+  using semantics_func_t = AstPtr (Semantics::*) (AstPtr&);
 
-  Parser()
+  Parser(Semantics* semantics=nullptr)
     : _whitespace(" \t\r\n\x0b\x0c"),
       _nameguard_set(false), _nameguard(true),
-      _state()
+      _state(), _semantics(semantics)
       { }
 
   BufferPtr _buffer;
@@ -40,6 +46,7 @@ public:
   bool _nameguard_set;
   bool _nameguard;
   State _state;
+  Semantics *_semantics;
 
   /* We sort by position first, because we can then optimize the cut
      operator.  However, if you use an unordered map here, remember to
@@ -87,7 +94,7 @@ public:
     return ast;
   }
 
-  AstPtr _call(std::string name, std::function<AstPtr ()> func)
+  AstPtr _call(std::string name, semantics_func_t sem_func, std::function<AstPtr ()> func)
   {
     size_t pos = _buffer->_pos;
     State& state = _state;
@@ -124,19 +131,21 @@ public:
 	  ast = el->second;
       }
 
+    /* Apply semantics.  */
+    if (_semantics)
+      ast = (_semantics->*sem_func)(ast);
     size_t next_pos = _buffer->_pos;
-    /* FIXME: Apply semantics.  */
-    State& next_state = state;
+    State& next_state = _state;
 
-    /* Fill memoization cache.  FIXME: Check "don't memo lookaheads" flag). */
+    /* Fill memoization cache.  FIXME: Check "don't memo lookaheads" flag. */
     memo_value_t value (ast, next_pos, next_state);
     _memoization_cache[key] = value;
 
-    AstException *exc = ast->as_exception();
-    if (exc)
-      _buffer->_pos = pos;
-    else
-      _state = next_state;
+    if (ast->as_exception())
+      {
+	_buffer->_pos = pos;
+	_state = state;
+      }
     return ast;
   }
 

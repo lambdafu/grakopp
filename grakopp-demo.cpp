@@ -26,7 +26,7 @@ public:
   AstPtr rule_h1()
   {
     AstPtr ast = std::make_shared<Ast>();
-    ast << _call("h1", [this] () {
+    ast << _call("h1", 0, [this] () {
       AstPtr ast = std::make_shared<Ast>();
       ast << _token(R"(=)"); RETURN_IF_EXC(ast);
       (*ast)["@"] << [this] () {
