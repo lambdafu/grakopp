@@ -86,6 +86,12 @@ public:
     _update_buffer();
   }
 
+  void reset()
+  {
+    _memoization_cache.clear();
+    _update_buffer();
+  }
+
   template<typename T>
   AstPtr _error(std::string msg)
   {
