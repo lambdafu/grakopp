@@ -446,6 +446,8 @@ class Grammar(Base):
                 int
                 main(int argc, char *argv[])
                 {{
+                    std::ios_base::sync_with_stdio(false);
+
                     int result = 0;
                     std::list<std::string> args(argv + 1, argv + argc);
                     bool validate = false;
