@@ -1,0 +1,50 @@
+# python/grakopp/cpp/ast.pyx - Grako++ Python bindings -*- coding: utf-8 -*-
+# Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
+# Written by Marcus Brinkmann <m.brinkmann@semantics.de>
+#
+# This file is part of Grako++.  Grako++ is free software; you can
+# redistribute it and/or modify it under the terms of the 2-clause
+# BSD license, see file LICENSE.TXT.
+
+from libcpp.string cimport string
+from libcpp.vector cimport vector
+from libcpp.list cimport list
+from libcpp.map cimport map
+from libcpp cimport bool
+
+cdef extern from "<memory>" namespace "std":
+    cdef cppclass shared_ptr[T]:
+        T& operator*()
+
+    # Oh well.  Seems that returning templatized types doesn't work.
+    cdef cppclass AstPtr
+    cdef AstPtr make_shared[Ast](Ast& ast)
+
+cdef extern from "grakopp/ast.hpp":
+    ctypedef shared_ptr[Ast] AstPtr
+
+    cdef cppclass AstNone:
+        pass
+
+    ctypedef string AstString
+
+    cdef cppclass AstList (list[AstPtr]):
+        bool _mergeable
+    
+    cdef cppclass AstMap (map[string, AstPtr]):
+        vector[string] _order
+
+    cdef cppclass AstException
+
+    cdef cppclass Ast:
+        void set(const AstNone&)
+        void set(const AstString&)
+        void set(const AstList&)
+        void set(const AstMap&)
+        void set(const AstException&)
+
+        AstNone* as_none()
+        AstString* as_string()
+        AstList* as_list()
+        AstMap* as_map()
+        AstException* as_exception()
