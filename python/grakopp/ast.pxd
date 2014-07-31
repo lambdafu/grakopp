@@ -37,14 +37,14 @@ cdef extern from "grakopp/ast.hpp":
     cdef cppclass AstException
 
     cdef cppclass Ast:
-        void set(const AstNone&)
-        void set(const AstString&)
-        void set(const AstList&)
-        void set(const AstMap&)
-        void set(const AstException&)
+        void set(const AstNone&) nogil
+        void set(const AstString&) nogil
+        void set(const AstList&) nogil
+        void set(const AstMap&) nogil
+        void set(const AstException&) nogil
 
-        AstNone* as_none()
-        AstString* as_string()
-        AstList* as_list()
-        AstMap* as_map()
-        AstException* as_exception()
+        AstNone* as_none() nogil
+        AstString* as_string() nogil
+        AstList* as_list() nogil
+        AstMap* as_map() nogil
+        AstException* as_exception() nogil

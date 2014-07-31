@@ -198,7 +198,7 @@ public:
     return ast;
   }
 
-  AstPtr _token(std::string token)
+  AstPtr _token(const std::string& token)
   {
     _buffer->next_token();
     if (! _buffer->match(token))

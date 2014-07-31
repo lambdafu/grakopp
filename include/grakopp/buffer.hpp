@@ -199,7 +199,7 @@ public:
     return ch != CHAR_NULL && std::isalpha(ch);
   }
 
-  bool match(std::string token)
+  bool match(const std::string& token)
   {
     int len = token.length();
 

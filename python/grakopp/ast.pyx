@@ -1,10 +1,10 @@
-# distutils: language = c++
-# -*- coding: utf-8 -*-
-
-# cython --cplus ast.pyx
-# g++ -std=c++11 -I../../include -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -o ast.so ast.cpp 
-
-from __future__ import absolute_import
+# python/grakopp/cpp/ast.pyx - Grako++ Python bindings -*- coding: utf-8 -*-
+# Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
+# Written by Marcus Brinkmann <m.brinkmann@semantics.de>
+#
+# This file is part of Grako++.  Grako++ is free software; you can
+# redistribute it and/or modify it under the terms of the 2-clause
+# BSD license, see file LICENSE.TXT.
 
 from cython.operator cimport dereference as deref, preincrement as inc
 
