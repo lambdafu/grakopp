@@ -132,6 +132,8 @@ std::ostream& operator<< (std::ostream& cout, const Ast& ast)
 	      _cout << ",\n";
 	    _cout << "\"" << key << "\" : " << *map.at(key);
 	  }
+	/* FIXME: Output those keys which are in the map but not in
+	   _order?  */
       }
       if (!first)
 	_cout << "\n";

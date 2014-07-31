@@ -110,6 +110,32 @@ public:
   /* This is set if a cut was encountered during parsing.  */
   bool _cut;
 
+  void set(const AstNone& none)
+  {
+    _content = none;
+  }
+
+  void set(const AstString& string)
+  {
+    _content = string;
+  }
+
+  void set(const AstList& list)
+  {
+    _content = list;
+  }
+
+  void set(const AstMap& map)
+  {
+    _content = map;
+  }
+
+  void set(const AstException& exc)
+  {
+    _content = exc;
+  }
+
+
   const AstNone& the_none() const
   {
     return boost::get<AstNone>(_content);
