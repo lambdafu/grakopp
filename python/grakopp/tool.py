@@ -17,8 +17,17 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import grako
-from . codegen import codegen
+from . codegen.cpp import codegen as codegen_cpp
+from . codegen.hpp import codegen as codegen_hpp
+from . codegen.pxd import codegen as codegen_pxd
+from . codegen.pyx import codegen as codegen_pyx
 
+codegen = {
+    'cpp': codegen_cpp,
+    'hpp': codegen_hpp,
+    'pxd': codegen_pxd,
+    'pyx': codegen_pyx
+}
 
 # From grako.tool:
 
@@ -44,6 +53,11 @@ argparser = argparse.ArgumentParser(prog='grako',
 argparser.add_argument('filename',
                        metavar='GRAMMAR',
                        help='The filename of the Grako grammar'
+                       )
+argparser.add_argument('-f', '--format',
+                       metavar='FORMAT',
+                       default='cpp',
+                       help='The output format (one of: ' + ', '.join(codegen.keys()) + ")"
                        )
 argparser.add_argument('-n', '--no-nameguard',
                        help='allow tokens that are prefixes of others',
@@ -77,12 +91,6 @@ argparser.add_argument('-s', '--statetype',
 def genmodel(name, grammar, trace=False, filename=None):
     parser = GrakoGrammarGenerator(name, trace=trace)
     return parser.parse(grammar, filename=filename)
-
-
-def gencode(name, grammar, trace=False, filename=None):
-    model = genmodel(name, grammar, trace=trace, filename=filename)
-    return codegen(model)
-
 
 def _error(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -125,7 +133,8 @@ def main():
         model.nameguard = nameguard
         model.statetype = statetype
 
-        result = codegen(model)
+        renderer = args.format
+        result = codegen[renderer](model)
 
         if outfile:
             with codecs.open(outfile, 'w', encoding='utf-8') as f:

@@ -1,4 +1,4 @@
-# python/grakopp/codegen.py - Grako++ code generator backend for grako -*- coding: utf-8 -*-
+# python/grakopp/codegen/cpp.py - Grako++ code generator backend for grako -*- coding: utf-8 -*-
 # Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
 # Written by Marcus Brinkmann <m.brinkmann@semantics.de>
 #
@@ -316,10 +316,9 @@ class Rule(_Decorator):
 
         fields.update(defines=sdefines)
 
-    
     # {defines}, {params}
     template = '''
-                AstPtr _{name}_()
+                AstPtr {classname}Parser::_{name}_()
                 {{
                     AstPtr ast = std::make_shared<Ast>();
                     ast << _call("{name}", &Semantics::_{name}_, [this] () {{
@@ -345,29 +344,24 @@ class Grammar(Base):
     def render_fields(self, fields):
         abstract_template = trim(self.abstract_rule_template)
         abstract_rules = [
-            abstract_template.format(parsername=fields['name'], name=rule.name)
+            abstract_template.format(parsername=fields['name'], classname=fields['name'], name=rule.name)
             for rule in self.node.rules
         ]
-        abstract_rules = indent('\n'.join(abstract_rules))
+        abstract_rules = '\n'.join(abstract_rules)
 
         if self.node.whitespace is not None:
             whitespace = "set_whitespace(" + cpp_repr(self.node.whitespace) + ");"
         else:
-            whitespace = ""
+            whitespace = "// use default whitespace setting"
 
         if self.node.nameguard is not None:
             nameguard = 'true' if self.node.nameguard else 'false'
             nameguard = "set_nameguard(" + nameguard + ");"
         else:
-            nameguard = ""
-
-        if self.node.statetype is not None:
-            statetype_arg = ", " + self.node.statetype
-        else:
-            statetype_arg = ""
+            nameguard = "// use default nameguard setting"
 
         rules = '\n'.join([
-            self.get_renderer(rule).render() for rule in self.node.rules
+            self.get_renderer(rule).render(classname=fields['name']) for rule in self.node.rules
         ])
 
         findruleitems = '\n'.join([
@@ -377,20 +371,18 @@ class Grammar(Base):
 
         version = str(tuple(int(n) for n in str(timestamp()).split('.')))
 
-        fields.update(rules=indent(rules),
+        fields.update(rules=rules,
                       findruleitems=indent(findruleitems),
                       abstract_rules=abstract_rules,
                       version=version,
                       whitespace=whitespace,
-                      statetype_arg=statetype_arg,
                       nameguard=nameguard
                       )
 
     # FIXME.  Clarify interface (avoid copies). 
     abstract_rule_template = '''
-            virtual AstPtr _{name}_ (AstPtr& ast)
+            AstPtr {classname}Semantics::_{name}_ (AstPtr& ast)
             {{
-                std::cout << "{name}" << "\\n";
                 return ast;
             }}
             '''
@@ -405,40 +397,31 @@ class Grammar(Base):
                    Any changes you make to it will be overwritten the next time
                    the file is generated.
                 */
-                #include <iostream>
-                #include <grakopp/grakopp.hpp>
+                #include "_{name}Parser.hpp"
 
                 // version__ = {version}
 
-                class {name}Semantics
-                {{
-                public:
                 {abstract_rules}
-                }};
 
-                class {name}Parser : public Parser<{name}Semantics{statetype_arg}>
+                {name}Parser::{name}Parser({name}Parser::Semantics* semantics)
+                  : Parser<{name}Parser::Semantics>(semantics)
                 {{
-                public:
-                    {name}Parser()
-                    {{
-                        {whitespace}
-                        {nameguard}
-                    }}
+                  {whitespace}
+                  {nameguard}
+                }}
 
-                    typedef AstPtr ({name}Parser::*rule_method_t) ();
-                    rule_method_t find_rule(const std::string& name)
-                    {{
-                        std::map<std::string, rule_method_t> map({{
-                {findruleitems:3::}
-                        }});
-                        auto el = map.find(name);
-                        if (el != map.end())
-                            return el->second;
-                        return 0;
-                    }}
+                {name}Parser::rule_method_t {name}Parser::find_rule(const std::string& name)
+                {{
+                  std::map<std::string, rule_method_t> map({{
+                {findruleitems}
+                  }});
+                  auto el = map.find(name);
+                  if (el != map.end())
+                    return el->second;
+                  return 0;
+                }}
 
                 {rules}
-                }};
 
                 #ifdef GRAKOPP_MAIN
                 #include <grakopp/ast-io.hpp>
