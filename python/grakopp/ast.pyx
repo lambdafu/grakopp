@@ -10,6 +10,7 @@ from cython.operator cimport dereference as deref, preincrement as inc
 
 from collections import OrderedDict
 
+
 cdef ast_to_python(Ast& ast):
     if ast.as_none() != NULL:
         return None
@@ -45,11 +46,15 @@ cdef ast_to_python(Ast& ast):
         # FIXME: include keys that are not in _order?
         return val
 
+
 cdef class PyAst:
-    cdef Ast* thisptr
+    """AST for grakopp parser."""
+
     def __cinit__(self):
         self.thisptr = new Ast()
+
     def __dealloc__(self):
         del self.thisptr
+
     def to_python(self):
         return ast_to_python(deref(self.thisptr))

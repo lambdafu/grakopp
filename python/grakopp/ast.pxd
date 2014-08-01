@@ -12,6 +12,9 @@ from libcpp.list cimport list
 from libcpp.map cimport map
 from libcpp cimport bool
 
+
+# C++ types
+
 cdef extern from "<memory>" namespace "std":
     cdef cppclass shared_ptr[T]:
         T& operator*()
@@ -19,6 +22,7 @@ cdef extern from "<memory>" namespace "std":
     # Oh well.  Seems that returning templatized types doesn't work.
     cdef cppclass AstPtr
     cdef AstPtr make_shared[Ast](Ast& ast)
+
 
 cdef extern from "grakopp/ast.hpp":
     ctypedef shared_ptr[Ast] AstPtr
@@ -48,3 +52,9 @@ cdef extern from "grakopp/ast.hpp":
         AstList* as_list() nogil
         AstMap* as_map() nogil
         AstException* as_exception() nogil
+
+
+# Extension types
+
+cdef class PyAst:
+    cdef Ast* thisptr

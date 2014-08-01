@@ -1,4 +1,4 @@
-# python/grakopp/cpp/buffer.pyx - Grako++ Python bindings -*- coding: utf-8 -*-
+# python/grakopp/cpp/buffer.pxd - Grako++ Python bindings -*- coding: utf-8 -*-
 # Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
 # Written by Marcus Brinkmann <m.brinkmann@semantics.de>
 #
@@ -9,6 +9,9 @@
 from libcpp.string cimport string
 from libcpp cimport bool
 
+
+# C++ types
+
 cdef extern from "<memory>" namespace "std":
     cdef cppclass shared_ptr[T]:
         T& operator*()
@@ -16,6 +19,7 @@ cdef extern from "<memory>" namespace "std":
     # Oh well.  Seems that returning templatized types doesn't work.
     cdef cppclass BufferPtr
     cdef BufferPtr make_shared[Buffer]()
+
 
 cdef extern from "grakopp/buffer.hpp":
     ctypedef shared_ptr[Buffer] BufferPtr
@@ -41,3 +45,9 @@ cdef extern from "grakopp/buffer.hpp":
         bool is_name_char(size_t pos) nogil
         bool match(string token) nogil
         # boost::optional<std::string> matchre(std::string pattern) nogil
+
+
+# Extension types
+
+cdef class PyBuffer(object):
+    cdef BufferPtr buffer
