@@ -14,11 +14,11 @@ from libcpp cimport bool
 
 cdef extern from "<memory>" namespace "std":
     cdef cppclass shared_ptr[T]:
-        T& operator*()
+        T& operator*() nogil
 
     # Oh well.  Seems that returning templatized types doesn't work.
     cdef cppclass BufferPtr
-    cdef BufferPtr make_shared[Buffer]()
+    cdef BufferPtr make_shared[Buffer]() nogil
 
 
 cdef extern from "grakopp/buffer.hpp":

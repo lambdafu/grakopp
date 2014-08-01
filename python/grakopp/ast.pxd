@@ -17,11 +17,11 @@ from libcpp cimport bool
 
 cdef extern from "<memory>" namespace "std":
     cdef cppclass shared_ptr[T]:
-        T& operator*()
+        T& operator*() nogil
 
     # Oh well.  Seems that returning templatized types doesn't work.
     cdef cppclass AstPtr
-    cdef AstPtr make_shared[Ast](Ast& ast)
+    cdef AstPtr make_shared[Ast](Ast& ast) nogil
 
 
 cdef extern from "grakopp/ast.hpp":
@@ -57,4 +57,4 @@ cdef extern from "grakopp/ast.hpp":
 # Extension types
 
 cdef class PyAst:
-    cdef Ast* thisptr
+    cdef AstPtr ast

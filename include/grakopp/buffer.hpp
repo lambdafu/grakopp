@@ -222,7 +222,7 @@ public:
 	    auto end = begin + len;
 
 	    bool token_is_alnum = find_if(begin, end, 
-					  [](char ch) { return !isalnum(ch); }) == end;
+					  [](char ch) { return !std::isalnum(ch); }) == end;
 	    if (token_is_alnum)
 	      return false;
 	  }

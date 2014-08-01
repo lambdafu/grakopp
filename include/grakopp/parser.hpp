@@ -13,6 +13,7 @@
 #include <functional>
 #include <string>
 #include <map>
+#include <cctype>
 
 #include "exceptions.hpp"
 #include "buffer.hpp"
@@ -36,7 +37,8 @@ public:
   using semantics_func_t = AstPtr (Semantics::*) (AstPtr&);
 
   Parser(Semantics* semantics=nullptr)
-    : _whitespace(" \t\r\n\x0b\x0c"),
+    : _buffer(std::make_shared<Buffer>()),
+      _whitespace(" \t\r\n\x0b\x0c"),
       _nameguard_set(false), _nameguard(true),
       _state(), _semantics(semantics)
       { }
@@ -119,8 +121,8 @@ public:
 	}
     }
 
-    //if name[0].islower():
-    //  self._next_token()
+    if (std::islower(name[0]))
+      _buffer->next_token();
 
     /* Call rule.  */
     AstPtr ast = func();
@@ -139,7 +141,8 @@ public:
 
     /* Apply semantics.  */
     if (_semantics)
-      ast = (_semantics->*sem_func)(ast);
+      if (!ast->as_exception())
+	ast = (_semantics->*sem_func)(ast);
     size_t next_pos = _buffer->_pos;
     State& next_state = _state;
 

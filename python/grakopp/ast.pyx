@@ -51,10 +51,10 @@ cdef class PyAst:
     """AST for grakopp parser."""
 
     def __cinit__(self):
-        self.thisptr = new Ast()
+        self.ast = make_shared[Ast]()
 
     def __dealloc__(self):
-        del self.thisptr
+        pass
 
     def to_python(self):
-        return ast_to_python(deref(self.thisptr))
+        return ast_to_python(deref(self.ast))
