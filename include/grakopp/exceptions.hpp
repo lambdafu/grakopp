@@ -41,7 +41,7 @@ public:
 
 
 /* Serialization format.  */
-std::ostream& operator<< (std::ostream& cout, const FailedParseBase& exc)
+inline std::ostream& operator<< (std::ostream& cout, const FailedParseBase& exc)
 {
   return cout << exc.what();
 }

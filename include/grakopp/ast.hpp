@@ -443,18 +443,18 @@ public:
 };
 
 
-AstPtr& operator<<(AstPtr& augend, const AstPtr& addend)
+inline AstPtr& operator<<(AstPtr& augend, const AstPtr& addend)
 {
   augend->add(addend);
   return augend;
 }
 
-bool operator== (const AstPtr& ast1, const AstPtr& ast2)
+inline bool operator== (const AstPtr& ast1, const AstPtr& ast2)
 {
   return *ast1 == *ast2;
 }
 
-bool operator!= (const AstPtr& ast1, const AstPtr& ast2)
+inline bool operator!= (const AstPtr& ast1, const AstPtr& ast2)
 {
   return !(*ast1 == *ast2);
 }
