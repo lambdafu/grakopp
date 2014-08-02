@@ -54,17 +54,17 @@ class FailedParse : public FailedParseBase
 public:
   FailedParse(const std::string& msg) : FailedParseBase(), _msg(msg) {}
 
-  const char *what() const throw()
+  const char* what() const throw()
   {
     return _msg.data();
   }
 
-  const char *type() const
+  const char* type() const
   {
     return "FailedParse";
   }
 
-  const char *initializer() const
+  const char* initializer() const
   {
     return _msg.data();
   }

@@ -23,6 +23,11 @@ cdef extern from "<memory>" namespace "std":
     cdef cppclass AstPtr
     cdef AstPtr make_shared[Ast](Ast& ast) nogil
 
+cdef extern from "grakopp/exceptions.hpp":
+    cdef cppclass FailedParseBase:
+        const char* type() nogil
+        const char* what() nogil
+        const char* initializer() nogil
 
 cdef extern from "grakopp/ast.hpp":
     ctypedef shared_ptr[Ast] AstPtr
@@ -38,7 +43,8 @@ cdef extern from "grakopp/ast.hpp":
     cdef cppclass AstMap (map[string, AstPtr]):
         vector[string] _order
 
-    cdef cppclass AstException
+    cdef cppclass AstException:
+        shared_ptr[FailedParseBase] _exc
 
     cdef cppclass Ast:
         void set(const AstNone&) nogil

@@ -10,6 +10,8 @@ from cython.operator cimport dereference as deref, preincrement as inc
 
 from collections import OrderedDict
 
+from grakopp.exceptions import FailedParse, FailedToken, FailedPattern, FailedLookahead
+
 
 cdef ast_to_python(Ast& ast):
     if ast.as_none() != NULL:
@@ -46,6 +48,22 @@ cdef ast_to_python(Ast& ast):
         # FIXME: include keys that are not in _order?
         return val
 
+    cdef AstException *ast_exc = ast.as_exception()
+    cdef const char *type
+    cdef const char *initializer
+    if ast_exc != NULL:
+        type = deref(ast_exc._exc).type()
+        initializer = deref(ast_exc._exc).initializer()
+        if type == b"FailedParse":
+            return FailedParse(initializer)
+        elif type == b"FailedToken":
+            return FailedToken(initializer)
+        elif type == b"FailedPattern":
+            return FailedPattern(initializer)
+        elif type == b"FailedLookahead":
+            return FailedLookahead(initializer)
+        else:
+            return FailedParse("unknown exception %s(%s)" % (type, repr(initializer)))
 
 cdef class PyAst:
     """AST for grakopp parser."""
