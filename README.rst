@@ -49,7 +49,7 @@ specified with the -f/--format option:
 +============+=============+=========================+
 | hpp        | \_name.hpp  | C++ declaration         |
 +------------+-------------+-------------------------+
-| cpp        | \_name.cpp   | C++ implementation      |
+| cpp        | \_name.cpp  | C++ implementation      |
 +------------+-------------+-------------------------+
 | pxd        | name.pxd    | Cython declaration      |
 +------------+-------------+-------------------------+
