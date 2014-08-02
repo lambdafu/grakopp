@@ -174,6 +174,7 @@ Authors
 -------
 
 ::
+
     Copyright (C) 2014 semantics Kommunikationsmanagement GmbH
     Written by Marcus Brinkmann <m.brinkmann@semantics.de>
     See LICENSE.txt for details.
