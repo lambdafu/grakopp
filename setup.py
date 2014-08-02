@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 
-from distutils.core import setup, Extension
+try:
+    import setuptools
+except ImportError:
+    from distutils.core import setup
+else:
+    from setuptools import setup
+
+from distutils.core import Extension
 from Cython.Build import cythonize
 
 import os
