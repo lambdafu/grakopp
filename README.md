@@ -43,25 +43,27 @@ The grakopp program is used like grako to compile PEG files to source
 code.  There are four different source code output formats that can be
 specified with the -f/--format option:
 
-
 | --format | --output        | Purpose               |
 | -------- | --------------- | --------------------- |
-| hpp      | _nameParser.hpp | C++ declaration       |
-| cpp      | _nameParser.cpp | C++ implementation    |
-| pxd      | nameParser.pxd  | Cython declaration    |
-| pyx      | nameParser.pyx  | Cython implementation |
+| hpp      | _name.hpp       | C++ declaration       |
+| cpp      | _name.cpp       | C++ implementation    |
+| pxd      | name.pxd        | Cython declaration    |
+| pyx      | name.pyx        | Cython implementation |
 
 For pure C++ parsers, generating the hpp and cpp files is sufficient.
 For Python integration, the pxd and pyx files are also needed.  For
 "name" you should subsitute the actual name of the parser (either the
-base name of the PEG file or the argument to the --name option).
+base name of the PEG file or the argument to the --name option).  The
+filenames are, for now, hard-coded into the source files (the
+underscore protects the C++ implementation from Cython-generated
+source files).
 
 Here is an example how to build a parser:
 
 ```sh
-$ ./grakopp -f hpp -o _basicParser.hpp tests/basic/basic.peg
-$ ./grakopp --whitespace="" --no-nameguard -f cpp -o _basicParser.cpp tests/basic/basic.peg
-$ g++ -DGRAKOPP_MAIN -std=c++11 -Iinclude -O4 -o basic _basicParser.cpp -lboost_regex
+$ ./grakopp -f hpp -o _basic.hpp tests/basic/basic.peg
+$ ./grakopp --whitespace="" --no-nameguard -f cpp -o _basic.cpp tests/basic/basic.peg
+$ g++ -DGRAKOPP_MAIN -std=c++11 -Iinclude -O4 -o basic _basic.cpp -lboost_regex
 ```
 
 You can invoke the parser like a Python parser generated with grako
@@ -76,6 +78,20 @@ $ echo -n e1e2 | ./basic /dev/stdin sequence
 ]
 ```
 
+
+C++ Interface
+-------------
+
+The following header files exist:
+
+| Header                   | Purpose                 |
+| --------                 | ----------------------- |
+| <grakopp/exceptions.hpp> | Parser exceptions       |
+| <grakopp/buffer.hpp>     | Buffer for I/O          |
+| <grakopp/ast.hpp>        | AST implementation      |
+| <grakopp/parser.hpp>     | Parser base class       |
+| <grakopp/grakopp.hpp>    | Include all above       |
+| <grakopp/ast-io.hpp>     | Optional AST stream I/O |
 
 Python Integration
 ------------------
@@ -95,10 +111,10 @@ $ cd ../..
 To continue the above example:
 
 ```sh
-$ ./grakopp -f pxd -o basicParser.pxd tests/basic/basic.peg
-$ ./grakopp -f pyx -o basicParser.pyx tests/basic/basic.peg
-$ cython -Ipython --cplus basicParser.pyx
-$ g++ -std=c++11 -Iinclude -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -o basicParser.so basicParser.cpp _basicParser.cpp -l boost_regex
+$ ./grakopp -f pxd -o basic.pxd tests/basic/basic.peg
+$ ./grakopp -f pyx -o basic.pyx tests/basic/basic.peg
+$ cython -Ipython --cplus basic.pyx
+$ g++ -std=c++11 -Iinclude -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -o basic.so basic.cpp _basic.cpp -l boost_regex
 ```
 
 You can then use it from Python:
@@ -108,8 +124,8 @@ $ PYTHONPATH=python python
 >>> from grakopp import buffer
 >>> b = buffer.PyBuffer()
 >>> b.from_string("e1e2")
->>> import basicParser
->>> p = basicParser.basicPyParser()
+>>> import basic
+>>> p = basic.basicPyParser()
 >>> p.set_buffer(b)
 >>> a = p._sequence_()
 >>> a.to_python()
@@ -128,18 +144,21 @@ TODO
 * dynamic Ast objects (so you can pass through Python or XML objects)
 * python/distutils integration
 * automatic compilation a la pyximport
+* add namespace
 * unicode support?
 * more support and tests for stateful parsing
 * regex syntax tests (make sure generated C strings are always proper)
 * profile and optimize
-* Grako features missing:
-** ignorecase (buffer match, matchre)
-** comments skipping
-** buffer line parsing and trace output (also in exceptions)
-** ParseInfo
-** rules with arguments
-** left recursion
-** semantic action _default
+
+Grako features missing:
+
+* ignorecase (buffer match, matchre)
+* comments skipping
+* buffer line parsing and trace output (also in exceptions)
+* ParseInfo
+* rules with arguments
+* left recursion
+* semantic action _default
 
 
 Authors

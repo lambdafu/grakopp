@@ -397,7 +397,7 @@ class Grammar(Base):
                    Any changes you make to it will be overwritten the next time
                    the file is generated.
                 */
-                #include "_{name}Parser.hpp"
+                #include "_{name}.hpp"
 
                 // version__ = {version}
 

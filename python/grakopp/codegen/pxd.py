@@ -89,7 +89,7 @@ class Grammar(ModelRenderer):
                 from grakopp.ast cimport AstPtr
                 from grakopp.parser cimport Parser
 
-                cdef extern from "_{name}Parser.hpp":
+                cdef extern from "_{name}.hpp":
 
                     cdef cppclass {name}Semantics:
                 {abstract_rules}

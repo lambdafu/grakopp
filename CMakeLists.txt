@@ -51,14 +51,21 @@ install(FILES
 Function(peg_files whitespace nameguard)
   Foreach(_pegFile ${ARGN})
     String(REGEX REPLACE ".peg$" ".cpp" _cppFile "${_pegFile}")
+    String(REGEX REPLACE ".peg$" ".hpp" _hppFile "${_pegFile}")
     If(${nameguard})
       Set(_nameguard "")
     Else(${nameguard})
       Set(_nameguard "--no-nameguard")
     EndIf(${nameguard})
     Add_Custom_Command(
-      OUTPUT ${_cppFile}
-      COMMAND ${CMAKE_SOURCE_DIR}/grakopp --whitespace=${whitespace} ${_nameguard} ${CMAKE_CURRENT_SOURCE_DIR}/${_pegFile} > ${_cppFile}
+      OUTPUT _${_hppFile}
+      COMMAND ${CMAKE_SOURCE_DIR}/grakopp -f hpp -o _${_hppFile} ${CMAKE_CURRENT_SOURCE_DIR}/${_pegFile}
+      DEPENDS ${_pegFile}
+      VERBATIM)
+    Add_Custom_Command(
+      OUTPUT _${_cppFile}
+      COMMAND ${CMAKE_SOURCE_DIR}/grakopp -f cpp --whitespace=${whitespace} ${_nameguard} -o _${_cppFile} ${CMAKE_CURRENT_SOURCE_DIR}/${_pegFile}
+      DEPENDS _${_hppFile}
       DEPENDS ${_pegFile}
       VERBATIM)
   EndForeach(_pegFile)
