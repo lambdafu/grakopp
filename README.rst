@@ -47,9 +47,9 @@ specified with the -f/--format option:
 +------------+-------------+-------------------------+
 | --format   | --output    | Purpose                 |
 +============+=============+=========================+
-| hpp        | name.hpp    | C++ declaration         |
+| hpp        | \_name.hpp  | C++ declaration         |
 +------------+-------------+-------------------------+
-| cpp        |  name.cpp   | C++ implementation      |
+| cpp        | \_name.cpp   | C++ implementation      |
 +------------+-------------+-------------------------+
 | pxd        | name.pxd    | Cython declaration      |
 +------------+-------------+-------------------------+
