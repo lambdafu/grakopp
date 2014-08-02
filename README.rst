@@ -99,7 +99,7 @@ The following header files exist:
 +-----------------------+---------------------------+
 | grakopp/parser.hpp    | Parser base class         |
 +-----------------------+---------------------------+
-| grakopp/grakopp/hpp   | Include all above         |
+| grakopp/grakopp.hpp   | Include all above         |
 +-----------------------+---------------------------+
 | grakopp/ast-io.hpp    | Optional AST stream I/O   |
 +-----------------------+---------------------------+
@@ -107,17 +107,12 @@ The following header files exist:
 Python Integration
 ------------------
 
-Until the Python package is prepared properly, build the Cython
-extensions manually, for example like this:
+You can build the Python package with setup.py in the normal way, for
+example:
 
 .. code:: sh
 
-    $ cd python/grakopp
-    $ cython --cplus buffer.pyx
-    $ cython --cplus ast.pyx
-    $ g++ -std=c++11 -I../../include -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -o buffer.so buffer.cpp 
-    $ g++ -std=c++11 -I../../include -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -o ast.so ast.cpp 
-    $ cd ../..
+    $ python setup.py build_ext --inplace
 
 To continue the above example:
 
