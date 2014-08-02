@@ -1,0 +1,11 @@
+include LICENSE.txt
+include README.rst
+include include/grakopp/*.hpp
+include CMakeLists.txt
+include tests/CMakeLists.txt
+include tests/basic/CMakeLists.txt
+include tests/basic/basic.peg
+include tests/basic/*.in
+include tests/basic/*.out
+include tools/CMakeLists.txt
+include tools/*.cpp
