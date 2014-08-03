@@ -18,4 +18,5 @@ peg_test(
   basic-009-positive_closure
   basic-010-positive_closure
   basic-011-positive_closure
+  basic-012-nestedname
   )

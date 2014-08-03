@@ -94,6 +94,22 @@ public:
   }
 };
 
+class AstExtensionType
+{
+public:
+  virtual ~AstExtensionType() = 0;
+  virtual std::ostream& output (std::ostream&) const = 0;
+  virtual bool operator==(const AstExtensionType& ext) const
+  {
+    /* If you can do better, do.  But note that there may be more than
+       one derived type, so use dynamic_cast for the argument.  */
+    return false;
+  }
+};
+
+/* The reason we use a pointer here is that we need polymorphism.  */
+using AstExtension = std::shared_ptr<AstExtensionType>;
+
 
 class Ast
 {
@@ -103,9 +119,10 @@ public:
   Ast(const AstList& list) : _content(list), _cut(false) {}
   Ast(const AstMap& map) : _content(map), _cut(false) {}
   Ast(const AstException& exc) : _content(exc), _cut(false) {}
+  Ast(const AstExtension& ext) : _content(ext), _cut(false) {}
 
   /* Payload variants.  */
-  boost::variant<AstNone, AstString, AstList, AstMap, AstException> _content;
+  boost::variant<AstNone, AstString, AstList, AstMap, AstException, AstExtension> _content;
 
   /* This is set if a cut was encountered during parsing.  */
   bool _cut;
@@ -133,6 +150,11 @@ public:
   void set(const AstException& exc)
   {
     _content = exc;
+  }
+
+  void set(const AstExtension& ext)
+  {
+    _content = ext;
   }
 
 
@@ -236,6 +258,26 @@ public:
     return boost::get<AstException>(&_content);
   }
 
+  const AstExtension& the_extension() const
+  {
+    return boost::get<AstExtension>(_content);
+  }
+
+  AstExtension& the_extension()
+  {
+    return boost::get<AstExtension>(_content);
+  }
+
+  const AstExtension* as_extension() const
+  {
+    return boost::get<AstExtension>(&_content);
+  }
+
+  AstExtension* as_extension()
+  {
+    return boost::get<AstExtension>(&_content);
+  }
+
 
   /* Concrete nodes use AstNone, AstString and AstList.  Abstract nodes
      use AstMap.  */
@@ -298,13 +340,27 @@ public:
 
       void operator() (AstMap& map)
       {
-	/* Adding to a map is ignored - this is used to set exceptions
-	   in the named-parameter case, and otherwise ignored.  */
+	/* Adding to a map is ignored, except for exceptions - which
+	   are already handled - and other maps.  */
 
-	/* FIXME: No.  Adding a map to a map can be entirely intentional,
-	   for example within an option:
-	   foo = "a" (key: "b" "c") "d";
-	   Maybe add mergeable flag to maps?  */
+	const AstMap* other_map = _addend->as_map();
+	if (! other_map)
+	  return;
+
+	/* This will handle named parameters nested in other
+	   constructs such as options: foo = name+: "a" (name: "b"); */
+        for (auto pair: *other_map)
+	  {
+	    const std::string& key = pair.first;
+	    const AstPtr& value = pair.second;
+
+	    /* For now, we don't mess with _order, as that is set up
+	       by the generated grammar.  Even if not We would only
+	       add to _order if the key is not there already, of
+	       course.  */
+	    // _order.push_back(key);
+	    map[key] << value;
+	  }
       }
 
       void operator() (AstException& exc)
@@ -312,6 +368,24 @@ public:
 	/* Can this happen?  */
 	assert(!"AstAdder can't add to an exception.");
       }
+
+      void operator() (AstExtension& ext)
+      {
+	/* Same as adding to a string.  */
+
+	AstPtr augend = std::make_shared<Ast>(ext);
+
+	if (_mergeable)
+	  {
+	    _augend._content = AstList({ augend });
+	    AstList& list = _augend.the_list();
+	    AstList& rlist = _addend->the_list();
+	    list.insert(list.end(), rlist.begin(), rlist.end());
+	  }
+	else
+	  _augend._content = AstList({ augend, _addend });
+      }
+
     };
 
     void operator() (AstNone& none)
@@ -342,6 +416,13 @@ public:
     {
       /* Exceptions overwrite everything.  */
       _augend._content = exc;
+    }
+
+    void operator() (AstExtension& ext)
+    {
+      /* Same as string.  */
+      AstAdderTo adder_to(_augend, _addend);
+      boost::apply_visitor(adder_to, _augend._content);
     }
   };
 
@@ -432,6 +513,12 @@ public:
     {
       const AstException *ast_exception = _other.as_exception();
       return ast_exception && (exception == *ast_exception);
+    }
+
+    bool operator() (const AstExtension& extension) const
+    {
+      const AstExtension *ast_extension = _other.as_extension();
+      return ast_extension && (*extension == **ast_extension);
     }
   };
     

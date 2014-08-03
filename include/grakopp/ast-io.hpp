@@ -147,6 +147,11 @@ std::ostream& operator<< (std::ostream& cout, const Ast& ast)
       _cout << (*exc).type() << "(\"" << msg << "\")";
     }
 
+    void operator() (const AstExtension& ext) const
+    {
+      ext->output(_cout);
+    }
+
   };
 
   AstDumper dumper(cout);

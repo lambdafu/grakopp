@@ -17,3 +17,7 @@ named_list = name+: "e" ;
 override = "e1" @:"e2" ;
 override_list = "e1" @+:"e2" ;
 eoi = "e1" $ ;
+
+(* A little bit more complex, but still basic.  *)
+
+nestedname = name+: "e1" (name: "e2") ;

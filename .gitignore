@@ -1,2 +1,10 @@
 *~
 *.pyc
+MANIFEST
+build/**
+dist/**
+python/grakopp.egg-info/**
+python/grakopp/ast.cpp
+python/grakopp/ast.so
+python/grakopp/buffer.cpp
+python/grakopp/buffer.so
