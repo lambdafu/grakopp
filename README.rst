@@ -12,7 +12,7 @@ performance over Python.
 Differences to Grako
 --------------------
 
-* The output is always AST/JSON.
+* The output is AST/JSON, but extension types are available.
 * The semantics class can be implemented in C++ or Cython (pure Python
   through Cython is planned).
 * The regular expression syntax is
@@ -154,12 +154,13 @@ TODO
 * more support and tests for stateful parsing
 * regex syntax tests (make sure generated C strings are always proper)
 * profile and optimize
+* documentation
 
 Grako features missing:
 
 * ignorecase (buffer match, matchre)
 * comments skipping
-* buffer line parsing and trace output (also in exceptions)
+* buffer line parsing and trace output (also in exceptions, and then use grako.exceptions)
 * ParseInfo
 * rules with arguments
 * left recursion
