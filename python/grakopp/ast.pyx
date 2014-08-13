@@ -7,10 +7,20 @@
 # BSD license, see file LICENSE.TXT.
 
 from cython.operator cimport dereference as deref, preincrement as inc
+from cpython.ref cimport PyObject, Py_XDECREF, Py_XINCREF
+from libcpp.string cimport string
 
 from collections import OrderedDict
 
 from grakopp.exceptions import FailedParse, FailedToken, FailedPattern, FailedLookahead
+
+
+class PyAstExtension:
+    def __init__(self, str):
+        self._repr = str
+
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, self._repr)
 
 
 cdef ast_to_python(Ast& ast):
@@ -64,6 +74,13 @@ cdef ast_to_python(Ast& ast):
             return FailedLookahead(initializer)
         else:
             return FailedParse("unknown exception %s(%s)" % (type, repr(initializer)))
+
+    cdef AstExtension *ast_ext = ast.as_extension()
+    cdef string ext_repr
+    if ast_ext != NULL:
+        ext_repr = deref(deref(ast_ext)).output()
+        return PyAstExtension(<bytes> ext_repr)
+
 
 cdef class PyAst:
     """AST for grakopp parser."""

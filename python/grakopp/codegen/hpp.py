@@ -92,6 +92,7 @@ class Grammar(ModelRenderer):
                 class {name}Semantics
                 {{
                 public:
+                    virtual ~{name}Semantics() {{}};
                 {abstract_rules}
                 }};
 
@@ -99,6 +100,7 @@ class Grammar(ModelRenderer):
                 {{
                 public:
                     {name}Parser({name}Semantics *semantics = nullptr);
+                    virtual ~{name}Parser() {{}};
                     typedef AstPtr ({name}Parser::*rule_method_t) ();
                     rule_method_t find_rule(const std::string& name);
                 {rules}

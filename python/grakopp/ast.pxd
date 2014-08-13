@@ -12,7 +12,6 @@ from libcpp.list cimport list
 from libcpp.map cimport map
 from libcpp cimport bool
 
-
 # C++ types
 
 cdef extern from "<memory>" namespace "std":
@@ -21,7 +20,9 @@ cdef extern from "<memory>" namespace "std":
 
     # Oh well.  Seems that returning templatized types doesn't work.
     cdef cppclass AstPtr
+    cdef cppclass AstExtension
     cdef AstPtr make_shared[Ast](Ast& ast) nogil
+    cdef AstExtension make_shared_ast_ext "make_shared<AstExtensionType>"(AstExtensionType& ast_ext) nogil
 
 cdef extern from "grakopp/exceptions.hpp":
     cdef cppclass FailedParseBase:
@@ -30,7 +31,7 @@ cdef extern from "grakopp/exceptions.hpp":
         const char* initializer() nogil
 
 cdef extern from "grakopp/ast.hpp":
-    ctypedef shared_ptr[Ast] AstPtr
+    ctypedef extern shared_ptr[Ast] AstPtr
 
     cdef cppclass AstNone:
         pass
@@ -46,18 +47,25 @@ cdef extern from "grakopp/ast.hpp":
     cdef cppclass AstException:
         shared_ptr[FailedParseBase] _exc
 
+    cdef cppclass AstExtensionType:
+        string output() nogil const
+
+    ctypedef shared_ptr[AstExtensionType] AstExtension
+
     cdef cppclass Ast:
         void set(const AstNone&) nogil
         void set(const AstString&) nogil
         void set(const AstList&) nogil
         void set(const AstMap&) nogil
         void set(const AstException&) nogil
+        void set(const AstExtension&) nogil
 
         AstNone* as_none() nogil
         AstString* as_string() nogil
         AstList* as_list() nogil
         AstMap* as_map() nogil
         AstException* as_exception() nogil
+        AstExtension* as_extension() nogil
 
 
 # Extension types

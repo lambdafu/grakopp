@@ -11,6 +11,7 @@
 #define _GRAKOPP_AST_HPP 1
 
 #include <string>
+#include <sstream>
 #include <list>
 #include <map>
 #include <iostream>
@@ -97,8 +98,22 @@ public:
 class AstExtensionType
 {
 public:
-  virtual ~AstExtensionType() = 0;
-  virtual std::ostream& output (std::ostream&) const = 0;
+  virtual ~AstExtensionType()
+  {
+  };
+
+  virtual std::ostream& output (std::ostream& _cout) const
+  {
+    return _cout << "AstExtensionType()";
+  }
+
+  virtual std::string output () const
+  {
+    std::stringstream oss;
+    output(oss);
+    return oss.str();
+  }
+
   virtual bool operator==(const AstExtensionType& ext) const
   {
     /* If you can do better, do.  But note that there may be more than

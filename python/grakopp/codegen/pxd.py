@@ -95,6 +95,7 @@ class Grammar(ModelRenderer):
                 {abstract_rules}
 
                     cdef cppclass {name}Parser(Parser[{name}Semantics{statetype_arg}]):
+                        {name}Semantics* _semantics
                         AstPtr {name}Parser() nogil
                         AstPtr {name}Parser({name}Semantics* semantics) nogil
                         # ctypedef AstPtr (nameParser::*rule_method_t) () nogil

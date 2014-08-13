@@ -6,6 +6,8 @@
 # redistribute it and/or modify it under the terms of the 2-clause
 # BSD license, see file LICENSE.TXT.
 
+from grakopp.ast cimport Ast
+
 cdef extern from "grakopp/ast-io.hpp":
     pass
 
@@ -13,7 +15,7 @@ cdef extern from "<iostream>" namespace "std":
     # FIXME: This won't work if there is a conflicting declaration of
     # class ostream.
     cdef cppclass ostream:
-        ostream& operator<< (const _Ast& val)
+        ostream& operator<< (const Ast& val)
         ostream& operator<< (const string& val)
         ostream& operator<< (const void*& val)
     ostream cout

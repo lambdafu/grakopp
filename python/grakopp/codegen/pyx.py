@@ -45,6 +45,13 @@ class Grammar(ModelRenderer):
         ]
         abstract_rules = indent('\n'.join(abstract_rules))
 
+        abstract_py_template = trim(self.abstract_rule_py_template)
+        abstract_rules_py = [
+            abstract_py_template.format(parsername=fields['name'], name=rule.name)
+            for rule in self.node.rules
+        ]
+        abstract_rules_py = indent('\n'.join(abstract_rules_py))
+
         rule_template = trim(self.rule_template)
         rules = [
             rule_template.format(parsername=fields['name'], name=rule.name)
@@ -61,15 +68,19 @@ class Grammar(ModelRenderer):
 
         fields.update(rules=indent(rules),
                       abstract_rules=abstract_rules,
+                      abstract_rules_py=abstract_rules_py,
                       version=version,
                       statetype_arg=statetype_arg
                       )
 
-    # FIXME.  Clarify interface (avoid copies). 
     abstract_rule_template = '''
             AstPtr _{name}_(AstPtr& ast) nogil:
-                with gil:
-                    print "{name}" # TODO: Actually invoke a wrapped rule.
+                return wrapped_call("_{name}_", ast)
+            '''
+
+    abstract_rule_py_template = '''
+            def _{name}_(self, ast):
+                print "_{name}_", ast
                 return ast
             '''
 
@@ -97,25 +108,96 @@ class Grammar(ModelRenderer):
 
                 from grakopp.buffer cimport PyBuffer
                 from grakopp.parser cimport Parser
-                from grakopp.ast cimport make_shared, Ast, AstPtr, PyAst
+                from grakopp.ast cimport shared_ptr, make_shared, Ast, AstPtr, PyAst
+
+                from libcpp.string cimport string
+                from grakopp.ast cimport AstExtension, AstExtensionType
+                from cpython.ref cimport PyObject, Py_XINCREF, Py_XDECREF
+
+                cdef extern cppclass AstPyObject
+
+                cdef cppclass AstPyObject(AstExtensionType):
+                    PyObject* _object
+
+                    __init__(PyObject* obj) with gil:
+                        Py_XINCREF(obj)
+                        this._object = obj
+
+                    __dealloc__() with gil:
+                        Py_XDECREF(this._object)
+
+                    string output() nogil const:
+                        with gil:
+                            return repr(<object> this._object)
+
+                ctypedef shared_ptr[AstPyObject] AstPyObjectPtr
+
+                cdef extern from "<memory>" namespace "std":
+                    cdef cppclass AstPyObject
+                    cdef AstPyObjectPtr make_shared_AstPyObject "std::make_shared<AstPyObject>" (PyObject*) nogil
+
+                cdef extern from "<memory>" namespace "std":
+                    AstExtension dynamic_pointer_cast_ast_extension "std::dynamic_pointer_cast<AstExtensionType>" (AstPyObjectPtr)
 
                 cdef cppclass {name}WrappedSemantics({name}Semantics):
-                    # TODO: Write a function to call Python objects
-                    # and return them in the Ast.
+                    PyObject* _semantics
+
+                    __init__():
+                        this._semantics = NULL
+
+                    void set_semantics(semantics) with gil:
+                        if this._semantics != NULL:
+                            Py_XDECREF(this._semantics)
+                            if semantics is None:
+                                this._semantics = NULL
+                                return
+                        this._semantics = <PyObject*> semantics
+                        Py_XINCREF(this._semantics)
+
+                    AstPtr wrapped_call(const char* rule, AstPtr& ast) with gil:
+                        if this._semantics == NULL:
+                            return ast
+
+                        func = getattr(<object>this._semantics, rule, None)
+                        if func == None:
+                            return ast
+
+                        pyast = PyAst()
+                        pyast.ast = ast
+                        # We could also work with PyAst objects...
+                        obj = pyast.to_python()
+                        obj = func(obj)
+
+                        # Dance with Cython to return an AstPtr.
+                        cdef AstExtension ast_ext
+                        ast_ext = dynamic_pointer_cast_ast_extension(make_shared_AstPyObject(<PyObject*>obj))
+                        cdef AstPtr new_ast
+                        new_ast = make_shared[Ast]()
+                        deref(new_ast).set(ast_ext)
+                        return new_ast
+
                 {abstract_rules}
+
 
                 cdef class {name}PyParser(object):
                     """Parser for Grakopp grammar '{name}'."""
 
                     cdef {name}Parser* parser
-                    # cdef {name}WrappedSemantics semantics
+                    # TODO: Support custom C++ semantics
+                    cdef basicWrappedSemantics* semantics
 
                     def __cinit__(self):
-                        # TODO: Support semantics argument (C++? Python? Both? Use inheritance?)
                         self.parser = new {name}Parser()
+                        # TODO: Support custom C++ semantics
+                        self.semantics = new basicWrappedSemantics()
 
                     def __dealloc__(self):
                         del self.parser
+                        del self.semantics
+
+                    def set_semantics(self, semantics):
+                        deref(self.semantics).set_semantics(semantics)
+                        deref(self.parser)._semantics = self.semantics
 
                     # Because Cython does not supported templated extension types,
                     # we can't use inheritance but have to put all members here.
@@ -136,4 +218,9 @@ class Grammar(ModelRenderer):
                     # rule_method_t find_rule(const std::string& name);
 
                 {rules}
+
+
+                class basicPySemantics(object):
+                {abstract_rules_py}
+
                '''

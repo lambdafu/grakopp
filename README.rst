@@ -123,30 +123,18 @@ To continue the above example:
     $ cython -Ipython --cplus basic.pyx
     $ g++ -std=c++11 -Iinclude -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -o basic.so basic.cpp _basic.cpp -l boost_regex
 
-You can then use it from Python:
+You can then use it from Python, see basic-demo.py:
 
-::
+.. code:: sh
 
-    $ PYTHONPATH=python python
-    >>> from grakopp import buffer
-    >>> b = buffer.PyBuffer()
-    >>> b.from_string("e1e2")
-    >>> import basic
-    >>> p = basic.basicPyParser()
-    >>> p.set_buffer(b)
-    >>> a = p._sequence_()
-    >>> a.to_python()
-    ['e1', 'e2']
-    >>> b.pos
-    4
-    >>> a = p._sequence_()
-    >>> a.to_python()
-    FailedToken('e1')
+    $ PYTHONPATH=python python basic-demo.py 
+    _sequence_ ['e1', 'e2']
+    PyAstExtension(['e1', 'e2'])
+
 
 TODO
 ----
 
-* dynamic Ast objects (so you can pass through Python or XML objects)
 * python/distutils integration
 * automatic compilation a la pyximport
 * add namespace
@@ -164,7 +152,7 @@ Grako features missing:
 * ParseInfo
 * rules with arguments
 * left recursion
-* semantic action "\_default"
+* semantic action "\_default" (possible in the WrappedSemantics)
 
 Authors
 -------
