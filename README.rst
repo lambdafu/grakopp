@@ -135,6 +135,12 @@ You can then use it from Python, see basic-demo.py:
 TODO
 ----
 
+* BUG: AstPyObjects are not translated properly to_python (you get an
+  AstExtension with the repr of the object at the moment).
+  AstPyObject should be part of ast.pyx, but we can't export the
+  constructor (see
+  https://mail.python.org/pipermail/cython-devel/2014-August/004131.html).
+  Needs a fix or work around.
 * python/distutils integration
 * automatic compilation a la pyximport
 * add namespace

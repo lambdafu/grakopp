@@ -32,7 +32,7 @@ setup(name="grakopp",
       license="BSD",
 
       zip_safe=False,
-      requires=["grako", "cython"],
+      install_requires=["grako", "cython>=0.21"],
       entry_points={
           "console_scripts": [
               "grakopp = grakopp.tool:main",
