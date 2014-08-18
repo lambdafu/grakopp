@@ -134,11 +134,13 @@ You can then use it from Python, see basic-demo.py:
 TODO
 ----
 
-* python/distutils integration
+* Convert wrapped semantics exceptions to corresponding AST objects.
+* Implement stateful parsing support for Python objects (intern Python
+  states by a dictionary and use the interned objects id() in C++ as intptr_t).
+* python/distutils integration a la cythonize
 * automatic compilation a la pyximport
 * add namespace
 * unicode support?
-* more support and tests for stateful parsing (esp. for Python semantics)
 * regex syntax tests (make sure generated C strings are always proper)
 * profile and optimize
 * documentation
