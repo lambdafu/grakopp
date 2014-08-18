@@ -59,3 +59,7 @@ class FailedLookahead(FailedParseBase):
     @property
     def message(self):
         return 'failed lookahead'
+
+class FailedSemantics(FailedParseBase):
+    def __init__(self, msg):
+        super(FailedSemantics, self).__init__(msg)

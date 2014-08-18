@@ -107,9 +107,11 @@ class Grammar(ModelRenderer):
 
                 from grakopp.buffer cimport PyBuffer
                 from grakopp.parser cimport Parser
-                from grakopp.ast cimport Ast, AstPtr, PyAst, python_to_ast
+                from grakopp.ast cimport Ast, AstPtr, PyAst, python_to_ast, exc_to_ast
 
                 from cpython.ref cimport PyObject, Py_XINCREF, Py_XDECREF
+
+                from grako.exceptions import GrakoException
 
                 cdef cppclass {name}WrappedSemantics({name}Semantics):
                     PyObject* _semantics
@@ -138,7 +140,10 @@ class Grammar(ModelRenderer):
                         pyast.ast = ast
                         # We could also work with PyAst objects...
                         obj = pyast.to_python()
-                        obj = func(obj)
+                        try:
+                            obj = func(obj)
+                        except GrakoException as exc:
+                            return exc_to_ast(<PyObject*> exc)
 
                         # Dance with Cython to return an AstPtr.
                         return python_to_ast(<PyObject*> obj)

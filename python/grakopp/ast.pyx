@@ -13,7 +13,8 @@ from libcpp.string cimport string
 from collections import OrderedDict
 
 from grakopp.exceptions import FailedParse, FailedToken, FailedPattern, FailedLookahead
-
+from grakopp.exceptions import FailedSemantics as GrakoppFailedSemantics
+from grako.exceptions import FailedSemantics as GrakoFailedSemantics
 
 # Define an AST extension to store native python objects.
 
@@ -40,6 +41,7 @@ cdef extern from "<memory>" namespace "std":
 cdef extern from "<memory>" namespace "std":
     AstExtension dynamic_pointer_cast_ast_extension "std::dynamic_pointer_cast<AstExtensionType>" (AstPyObjectPtr)
     AstPyObjectPtr dynamic_pointer_cast_ast_py_object "std::dynamic_pointer_cast<AstPyObject>" (AstExtension)
+    shared_ptr[FailedParseBase] dynamic_pointer_cast_FailedParseBase "std::dynamic_pointer_cast<FailedParseBase>" (shared_ptr[FailedSemantics])
 
 class PyAstExtension:
     # For unknown extension objects, just capture the output.
@@ -52,15 +54,29 @@ class PyAstExtension:
 
 
 cdef AstPtr python_to_ast(PyObject* obj):
-   """Store native Python object into an AST object and return a
-   pointer."""
-   cdef AstExtension ast_ext
-   ast_ext = dynamic_pointer_cast_ast_extension(make_shared_AstPyObject(obj))
-   cdef AstPtr new_ast
-   new_ast = make_shared[Ast]()
-   deref(new_ast).set(ast_ext)
-   return new_ast
+    """Store native Python object into an AST object and return a
+    pointer."""
+    cdef AstExtension ast_ext
+    ast_ext = dynamic_pointer_cast_ast_extension(make_shared_AstPyObject(obj))
+    cdef AstPtr new_ast
+    new_ast = make_shared[Ast]()
+    deref(new_ast).set(ast_ext)
+    return new_ast
 
+cdef AstPtr exc_to_ast(PyObject* _exc):
+    cdef object exc = <object> _exc
+    """Store Python exception into an AST object and return a pointer."""
+    cdef AstException ast_exc
+
+    if isinstance(exc, GrakoFailedSemantics):
+        ast_exc._exc = dynamic_pointer_cast_FailedParseBase(make_shared_FailedSemantics(exc.args[0]))
+    else:
+        ast_exc._exc = dynamic_pointer_cast_FailedParseBase(make_shared_FailedSemantics("Unknown runtime exception"))
+
+    cdef AstPtr new_ast
+    new_ast = make_shared[Ast]()
+    deref(new_ast).set(ast_exc)
+    return new_ast
 
 cdef ast_to_python(Ast& ast):
     if ast.as_none() != NULL:
@@ -111,6 +127,8 @@ cdef ast_to_python(Ast& ast):
             return FailedPattern(initializer)
         elif type == b"FailedLookahead":
             return FailedLookahead(initializer)
+        elif type == b"FailedSemantics":
+            return GrakoppFailedSemantics(initializer)
         else:
             return FailedParse("unknown exception %s(%s)" % (type, repr(initializer)))
 

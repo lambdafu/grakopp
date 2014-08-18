@@ -134,7 +134,8 @@ You can then use it from Python, see basic-demo.py:
 TODO
 ----
 
-* Convert wrapped semantics exceptions to corresponding AST objects.
+* Convert more semantics exceptions (beside FailedSemantics) to
+  corresponding AST objects in exc_to_ast.
 * Implement stateful parsing support for Python objects (intern Python
   states by a dictionary and use the interned objects id() in C++ as intptr_t).
 * python/distutils integration a la cythonize

@@ -14,5 +14,5 @@ p.set_semantics(s)
 
 a = p._sequence_()
 
-print a.to_python()
+print repr(a.to_python())
 

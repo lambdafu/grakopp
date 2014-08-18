@@ -159,4 +159,28 @@ public:
   void _throw() { throw *this; }
 };
 
+class FailedSemantics : public FailedParseBase
+{
+  const std::string& _msg;
+public:
+  FailedSemantics(const std::string& msg) : FailedParseBase(), _msg(msg) {}
+
+  const char* what() const throw()
+  {
+    return _msg.data();
+  }
+
+  const char* type() const
+  {
+    return "FailedSemantics";
+  }
+
+  const char* initializer() const
+  {
+    return _msg.data();
+  }
+
+  void _throw() { throw *this; }
+};
+
 #endif /* GRAKOPP_EXCEPTIONS_HPP */

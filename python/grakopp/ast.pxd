@@ -23,14 +23,19 @@ cdef extern from "<memory>" namespace "std":
     # Oh well.  Seems that returning templatized types doesn't work.
     cdef cppclass AstPtr
     cdef cppclass AstExtension
+    cdef cppclass FailedSemantics
     cdef AstPtr make_shared[Ast](Ast& ast) nogil
-    cdef AstExtension make_shared_ast_ext "make_shared<AstExtensionType>"(AstExtensionType& ast_ext) nogil
+    cdef AstExtension make_shared_ast_ext "std::make_shared<AstExtensionType>"(AstExtensionType& ast_ext) nogil
+    cdef shared_ptr[FailedSemantics] make_shared_FailedSemantics "std::make_shared<FailedSemantics>"(const char* str) nogil
 
 cdef extern from "grakopp/exceptions.hpp":
     cdef cppclass FailedParseBase:
         const char* type() nogil
         const char* what() nogil
         const char* initializer() nogil
+
+    cdef cppclass FailedSemantics(FailedParseBase):
+        FailedSemantics(const char* msg) nogil
 
 cdef extern from "grakopp/ast.hpp":
     ctypedef extern shared_ptr[Ast] AstPtr
@@ -73,6 +78,8 @@ cdef extern from "grakopp/ast.hpp":
 # Extension types
 
 cdef AstPtr python_to_ast(PyObject* obj)
+
+cdef AstPtr exc_to_ast(PyObject* exc)
 
 cdef class PyAst:
     cdef AstPtr ast

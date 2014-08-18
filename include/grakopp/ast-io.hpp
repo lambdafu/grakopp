@@ -316,6 +316,8 @@ std::istream& operator>> (std::istream& is, AstException& exc)
     exc._exc = std::make_shared<FailedPattern>(msg);
   else if (!strcmp(token, "FailedLookahead"))
     exc._exc = std::make_shared<FailedLookahead>(msg);
+  else if (!strcmp(token, "FailedSemantics"))
+    exc._exc = std::make_shared<FailedSemantics>(msg);
   else
     throw std::invalid_argument("unknown exception");
 
