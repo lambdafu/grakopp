@@ -15,12 +15,51 @@ from collections import OrderedDict
 from grakopp.exceptions import FailedParse, FailedToken, FailedPattern, FailedLookahead
 
 
+# Define an AST extension to store native python objects.
+
+cdef cppclass AstPyObject "AstPyObject" (AstExtensionType):
+    PyObject* _object
+
+    __init__(PyObject* obj) with gil:
+        Py_XINCREF(obj)
+        this._object = obj
+
+    __dealloc__() with gil:
+        Py_XDECREF(this._object)
+
+    string output() nogil const:
+        with gil:
+            return repr(<object> this._object)
+
+ctypedef shared_ptr[AstPyObject] AstPyObjectPtr
+
+cdef extern from "<memory>" namespace "std":
+    cdef cppclass AstPyObject
+    cdef AstPyObjectPtr make_shared_AstPyObject "std::make_shared<AstPyObject>" (PyObject*) nogil
+
+cdef extern from "<memory>" namespace "std":
+    AstExtension dynamic_pointer_cast_ast_extension "std::dynamic_pointer_cast<AstExtensionType>" (AstPyObjectPtr)
+    AstPyObjectPtr dynamic_pointer_cast_ast_py_object "std::dynamic_pointer_cast<AstPyObject>" (AstExtension)
+
 class PyAstExtension:
+    # For unknown extension objects, just capture the output.
+
     def __init__(self, str):
         self._repr = str
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, self._repr)
+
+
+cdef AstPtr python_to_ast(PyObject* obj):
+   """Store native Python object into an AST object and return a
+   pointer."""
+   cdef AstExtension ast_ext
+   ast_ext = dynamic_pointer_cast_ast_extension(make_shared_AstPyObject(obj))
+   cdef AstPtr new_ast
+   new_ast = make_shared[Ast]()
+   deref(new_ast).set(ast_ext)
+   return new_ast
 
 
 cdef ast_to_python(Ast& ast):
@@ -76,11 +115,19 @@ cdef ast_to_python(Ast& ast):
             return FailedParse("unknown exception %s(%s)" % (type, repr(initializer)))
 
     cdef AstExtension *ast_ext = ast.as_extension()
+    cdef AstExtension ext_obj
+    cdef AstPyObjectPtr py_obj
     cdef string ext_repr
     if ast_ext != NULL:
-        ext_repr = deref(deref(ast_ext)).output()
-        return PyAstExtension(<bytes> ext_repr)
-
+        ext_obj = deref(ast_ext)
+        py_obj = dynamic_pointer_cast_ast_py_object(ext_obj)
+        if <bool> py_obj:
+            return <object> deref(py_obj)._object
+        else:
+            # For unknown extension objects, just capture the output.
+            ext_repr = deref(ext_obj).output()
+            return PyAstExtension(<bytes> ext_repr)
+    return None
 
 cdef class PyAst:
     """AST for grakopp parser."""

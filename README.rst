@@ -13,8 +13,7 @@ Differences to Grako
 --------------------
 
 * The output is AST/JSON, but extension types are available.
-* The semantics class can be implemented in C++ or Cython (pure Python
-  through Cython is planned).
+* The semantics class can be implemented in C++, Cython or pure Python.
 * The regular expression syntax is
   `ECMAScript <http://www.cplusplus.com/reference/regex/ECMAScript/>`__,
   not Python.
@@ -129,23 +128,17 @@ You can then use it from Python, see basic-demo.py:
 
     $ PYTHONPATH=python python basic-demo.py 
     _sequence_ ['e1', 'e2']
-    PyAstExtension(['e1', 'e2'])
+    ['e1', 'e2']
 
 
 TODO
 ----
 
-* BUG: AstPyObjects are not translated properly to_python (you get an
-  AstExtension with the repr of the object at the moment).
-  AstPyObject should be part of ast.pyx, but we can't export the
-  constructor (see
-  https://mail.python.org/pipermail/cython-devel/2014-August/004131.html).
-  Needs a fix or work around.
 * python/distutils integration
 * automatic compilation a la pyximport
 * add namespace
 * unicode support?
-* more support and tests for stateful parsing
+* more support and tests for stateful parsing (esp. for Python semantics)
 * regex syntax tests (make sure generated C strings are always proper)
 * profile and optimize
 * documentation

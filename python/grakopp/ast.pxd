@@ -6,6 +6,8 @@
 # redistribute it and/or modify it under the terms of the 2-clause
 # BSD license, see file LICENSE.TXT.
 
+from cpython.ref cimport PyObject
+
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.list cimport list
@@ -69,6 +71,8 @@ cdef extern from "grakopp/ast.hpp":
 
 
 # Extension types
+
+cdef AstPtr python_to_ast(PyObject* obj)
 
 cdef class PyAst:
     cdef AstPtr ast

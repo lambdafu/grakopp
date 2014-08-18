@@ -104,40 +104,12 @@ class Grammar(ModelRenderer):
                 # Version: {version}
 
                 from cython.operator cimport dereference as deref
-                from libcpp.string cimport string
 
                 from grakopp.buffer cimport PyBuffer
                 from grakopp.parser cimport Parser
-                from grakopp.ast cimport shared_ptr, make_shared, Ast, AstPtr, PyAst
+                from grakopp.ast cimport Ast, AstPtr, PyAst, python_to_ast
 
-                from libcpp.string cimport string
-                from grakopp.ast cimport AstExtension, AstExtensionType
                 from cpython.ref cimport PyObject, Py_XINCREF, Py_XDECREF
-
-                cdef extern cppclass AstPyObject
-
-                cdef cppclass AstPyObject(AstExtensionType):
-                    PyObject* _object
-
-                    __init__(PyObject* obj) with gil:
-                        Py_XINCREF(obj)
-                        this._object = obj
-
-                    __dealloc__() with gil:
-                        Py_XDECREF(this._object)
-
-                    string output() nogil const:
-                        with gil:
-                            return repr(<object> this._object)
-
-                ctypedef shared_ptr[AstPyObject] AstPyObjectPtr
-
-                cdef extern from "<memory>" namespace "std":
-                    cdef cppclass AstPyObject
-                    cdef AstPyObjectPtr make_shared_AstPyObject "std::make_shared<AstPyObject>" (PyObject*) nogil
-
-                cdef extern from "<memory>" namespace "std":
-                    AstExtension dynamic_pointer_cast_ast_extension "std::dynamic_pointer_cast<AstExtensionType>" (AstPyObjectPtr)
 
                 cdef cppclass {name}WrappedSemantics({name}Semantics):
                     PyObject* _semantics
@@ -169,12 +141,7 @@ class Grammar(ModelRenderer):
                         obj = func(obj)
 
                         # Dance with Cython to return an AstPtr.
-                        cdef AstExtension ast_ext
-                        ast_ext = dynamic_pointer_cast_ast_extension(make_shared_AstPyObject(<PyObject*>obj))
-                        cdef AstPtr new_ast
-                        new_ast = make_shared[Ast]()
-                        deref(new_ast).set(ast_ext)
-                        return new_ast
+                        return python_to_ast(<PyObject*> obj)
 
                 {abstract_rules}
 
