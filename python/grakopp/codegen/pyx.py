@@ -193,6 +193,8 @@ class Grammar(ModelRenderer):
 
                     def reset(self):
                         deref(self.parser).reset()
+                        self.state_intern = dict()
+                        self.state_by_id = dict()
 
                     # Support for stateful parsing.
                     property _state:
