@@ -156,7 +156,7 @@ class Grammar(ModelRenderer):
 
                     cdef {name}Parser* parser
                     # TODO: Support custom C++ semantics
-                    cdef basicWrappedSemantics* semantics
+                    cdef {name}WrappedSemantics* semantics
                     # Support for stateful parsing.
                     cdef state_intern
                     cdef state_by_id
@@ -164,7 +164,7 @@ class Grammar(ModelRenderer):
                     def __cinit__(self):
                         self.parser = new {name}Parser()
                         # TODO: Support custom C++ semantics
-                        self.semantics = new basicWrappedSemantics()
+                        self.semantics = new {name}WrappedSemantics()
                         # We internalize state objects and then use the id() of the
                         # internalized state.  Do not use hash(), as it is prone to
                         # collisions.
@@ -215,7 +215,7 @@ class Grammar(ModelRenderer):
                 {rules}
 
 
-                class basicPySemantics(object):
+                class {name}PySemantics(object):
                 {abstract_rules_py}
 
                '''
