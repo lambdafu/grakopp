@@ -14,6 +14,7 @@
 #include <string>
 #include <map>
 #include <cctype>
+#include <cstdint>
 
 #include "exceptions.hpp"
 #include "buffer.hpp"
@@ -28,7 +29,7 @@ class NoSemantics
 {
 };
 
-template <typename _Semantics=NoSemantics, typename _State=int>
+template <typename _Semantics=NoSemantics, typename _State=intptr_t>
 class Parser
 {
 public:

@@ -87,21 +87,21 @@ C++ Interface
 
 The following header files exist:
 
-+-----------------------+---------------------------+
-| Header                | Purpose                   |
-+=======================+===========================+
-| grakopp/exception.hpp | Parser exceptions         |
-+-----------------------+---------------------------+
-| grakopp/buffer.hpp    | Buffer for I/O            |
-+-----------------------+---------------------------+
-| grakopp/ast.hpp       | AST implementation        |
-+-----------------------+---------------------------+
-| grakopp/parser.hpp    | Parser base class         |
-+-----------------------+---------------------------+
-| grakopp/grakopp.hpp   | Include all above         |
-+-----------------------+---------------------------+
-| grakopp/ast-io.hpp    | Optional AST stream I/O   |
-+-----------------------+---------------------------+
++------------------------+---------------------------+
+| Header                 | Purpose                   |
++========================+===========================+
+| grakopp/exceptions.hpp | Parser exceptions         |
++------------------------+---------------------------+
+| grakopp/buffer.hpp     | Buffer for I/O            |
++------------------------+---------------------------+
+| grakopp/ast.hpp        | AST implementation        |
++------------------------+---------------------------+
+| grakopp/parser.hpp     | Parser base class         |
++------------------------+---------------------------+
+| grakopp/grakopp.hpp    | Include all above         |
++------------------------+---------------------------+
+| grakopp/ast-io.hpp     | Optional AST stream I/O   |
++------------------------+---------------------------+
 
 Python Integration
 ------------------
@@ -136,8 +136,6 @@ TODO
 
 * Convert more semantics exceptions (beside FailedSemantics) to
   corresponding AST objects in exc_to_ast.
-* Implement stateful parsing support for Python objects (intern Python
-  states by a dictionary and use the interned objects id() in C++ as intptr_t).
 * python/distutils integration a la cythonize
 * automatic compilation a la pyximport
 * add namespace

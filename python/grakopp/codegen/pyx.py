@@ -157,11 +157,19 @@ class Grammar(ModelRenderer):
                     cdef {name}Parser* parser
                     # TODO: Support custom C++ semantics
                     cdef basicWrappedSemantics* semantics
+                    # Support for stateful parsing.
+                    cdef state_intern
+                    cdef state_by_id
 
                     def __cinit__(self):
                         self.parser = new {name}Parser()
                         # TODO: Support custom C++ semantics
                         self.semantics = new basicWrappedSemantics()
+                        # We internalize state objects and then use the id() of the
+                        # internalized state.  Do not use hash(), as it is prone to
+                        # collisions.
+                        self.state_intern = dict()
+                        self.state_by_id = dict()
 
                     def __dealloc__(self):
                         del self.parser
@@ -185,6 +193,19 @@ class Grammar(ModelRenderer):
 
                     def reset(self):
                         deref(self.parser).reset()
+
+                    # Support for stateful parsing.
+                    property _state:
+                        def __get__(self):
+                            value_id = deref(self.parser)._state
+                            return self.state_by_id.get(value_id, None)
+
+                        def __set__(self, value):
+                            # Get internalized state object.
+                            value = self.state_intern.setdefault(value, value)
+                            value_id = id(value)
+                            self.state_by_id.setdefault(value_id, value)
+                            deref(self.parser)._state = value_id
 
                     # typedef AstPtr (nameParser::*rule_method_t) ();
                     # rule_method_t find_rule(const std::string& name);

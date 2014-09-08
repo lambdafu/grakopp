@@ -83,8 +83,10 @@ class Grammar(ModelRenderer):
                 #
                 # Any changes you make to it will be overwritten the next time
                 # the file is generated.
-                
+
                 # Version: {version}
+
+                from libc.stdint cimport intptr_t
 
                 from grakopp.ast cimport AstPtr
                 from grakopp.parser cimport Parser
@@ -98,6 +100,7 @@ class Grammar(ModelRenderer):
                         {name}Semantics* _semantics
                         AstPtr {name}Parser() nogil
                         AstPtr {name}Parser({name}Semantics* semantics) nogil
+                        intptr_t _state
                         # ctypedef AstPtr (nameParser::*rule_method_t) () nogil
                         # rule_method_t find_rule(const string& name) nogil
                 {rules}
