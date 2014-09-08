@@ -12,6 +12,13 @@ from libcpp.string cimport string
 
 from collections import OrderedDict
 
+class GrakoppAst(OrderedDict):
+    def __getattr__(self, name):
+        if self.has_key(name):
+            return self[name]
+        super(GrakoppAst, self).__getattr__(name)
+
+
 from grakopp.exceptions import FailedParse, FailedToken, FailedPattern, FailedLookahead
 from grakopp.exceptions import FailedSemantics as GrakoppFailedSemantics
 from grako.exceptions import FailedSemantics as GrakoFailedSemantics
@@ -103,7 +110,7 @@ cdef ast_to_python(Ast& ast):
     cdef vector[string].iterator keys_it_end
     cdef string key
     if ast_map != NULL:
-        val = OrderedDict()
+        val = GrakoppAst()
         keys_it = ast_map._order.begin()
         keys_it_end = ast_map._order.end()
         while keys_it != keys_it_end:            
